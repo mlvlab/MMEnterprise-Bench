@@ -248,7 +248,7 @@ Every project is seeded from one public document listed in `seed_documents.json`
 
 MMEnterprise-Bench is an arXiv preprint; a BibTeX entry will be added once the arXiv ID is available. Until then please cite it as:
 
-> Seohyun Lee\*, Jongha Kim\*, Dohwan Ko, Ji Soo Lee, Seoung Choi, Jayun Koo, Hyunwoo J. Kim. *MMEnterprise-Bench: Evaluating Enterprise Agents over Evolving Multimodal Records.* arXiv preprint, 2026.
+> Seohyun Lee\*, Jongha Kim\*, Dohwan Ko, Ji Soo Lee, Seoung Choi, Jayun Ku, Hyunwoo J. Kim. *MMEnterprise-Bench: Evaluating Enterprise Agents over Evolving Multimodal Records.* arXiv preprint, 2026.
 
 ## Links
 
