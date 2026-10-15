@@ -13,8 +13,9 @@
 **[Seohyun Lee](https://www.seohyunleee.com/)<sup>1,\*</sup> &nbsp;
 [Jongha Kim](https://jonghakim35.github.io/)<sup>2,\*</sup> &nbsp;
 [Dohwan Ko](https://ikodoh.github.io/)<sup>2</sup> &nbsp;
-[Seoung Choi](https://choisw0823.github.io)<sup>1</sup> &nbsp;
 Ji Soo Lee<sup>1</sup> &nbsp;
+[Seoung Choi](https://choisw0823.github.io)<sup>1</sup> &nbsp;
+Jayun Koo<sup>1</sup> &nbsp;
 [Hyunwoo J. Kim](https://www.hyunwoojkim.com/home)<sup>1,&dagger;</sup>**
 
 <sup>1</sup> KAIST &nbsp;&nbsp; <sup>2</sup> Korea University &nbsp;&nbsp;
