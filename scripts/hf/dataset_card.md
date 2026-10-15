@@ -48,7 +48,7 @@ configs:
 
 MMEnterprise-Bench asks whether an agent can answer questions over a simulated organization's working records: Slack threads, Notion pages, emails, meeting notes, slides, PDF pages, and standalone images that are revised over time and sometimes contradict each other. Each of the 30 projects is seeded from one public document and grows into a multimodal workspace; together the 30 workspaces hold 7,140 retrieval records, and 1,613 questions test evidence reasoning, conflict resolution across sources and time, and knowing when the records do not contain an answer.
 
-![MMEnterprise-Bench teaser](https://raw.githubusercontent.com/mlvlab/MMEnterprise-Bench/main/docs/static/figures/fig1_teaser.png)
+![MMEnterprise-Bench construction pipeline](https://raw.githubusercontent.com/mlvlab/MMEnterprise-Bench/main/docs/static/figures/fig2_pipeline.png)
 
 - Code and evaluation toolkit: https://github.com/mlvlab/MMEnterprise-Bench
 - Project page: https://mlvlab.github.io/MMEnterprise-Bench/

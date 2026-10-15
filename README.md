@@ -4,111 +4,115 @@
 
 [Project page](https://mlvlab.github.io/MMEnterprise-Bench/) · Paper (arXiv, coming soon) · [🤗 Dataset](https://huggingface.co/datasets/MMEnterprise-Bench/MMEnterprise-Bench) · [🤗 Baselines](https://huggingface.co/datasets/MMEnterprise-Bench/baselines)
 
-<img src="docs/static/figures/fig1_teaser.png" alt="MMEnterprise-Bench teaser" width="100%">
+<img src="docs/static/figures/fig2_pipeline.png" alt="MMEnterprise-Bench construction pipeline" width="100%">
 
-MMEnterprise-Bench asks whether an agent can answer questions over a real-looking company workspace: Slack threads, emails, Notion pages, meeting notes, slide decks, PDF pages and charts that are produced, revised and contradicted over time. Each of the 30 simulated projects is grown from a public seed document, and every question comes with a reference answer, the sufficient evidence records, and a reasoning trace. Answering requires finding the right records in a shared 7,140-record corpus, reading text and images together, and resolving conflicts between sources and between versions. The benchmark ships with frozen retrieval rankings from two retrievers, so a run is reproducible without any embedding model, and with a judge protocol that scores any agent from a one-line-per-question predictions file.
+MMEnterprise-Bench is a QA benchmark over simulated company workspaces (Slack, email, Notion, meeting notes, slides, PDF pages, charts) whose records are revised and contradicted over time. It tests evidence reasoning, cross-source and temporal conflict resolution, and unanswerability.
 
-**What's inside:** 1,613 questions (1,526 answerable + 87 unanswerable) · 30 projects · 7,140 retrieval records (5,725 text + 1,415 visual) · 287 record versions · 8 tasks in 3 categories · frozen top-100 rankings for a 2B and an 8B retriever.
+**1,613 questions** (1,526 answerable + 87 unanswerable) · **30 projects** · **7,140 records** (5,725 text + 1,415 visual) · **8 tasks** in 3 categories · frozen top-100 rankings from a 2B and an 8B retriever.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/mlvlab/MMEnterprise-Bench.git
-cd MMEnterprise-Bench
-python -m pip install -e .                 # Python >= 3.10; only huggingface_hub is required
-mmeb download                              # -> data/MMEnterprise-Bench (230 MB, SHA-256 verified)
-mmeb score examples/predictions_sample.jsonl --output outputs/sample --limit 20   # needs OPENAI_API_KEY
+git clone https://github.com/mlvlab/MMEnterprise-Bench.git && cd MMEnterprise-Bench
+pip install -e .      # Python >= 3.10
+mmeb download         # -> data/MMEnterprise-Bench (230 MB, checksums verified)
 ```
-
-`mmeb score` judges each predicted answer against the reference with an LLM judge (GPT-5.6 Luna by default; any OpenAI-compatible server works, see below) and writes `metrics.json`, `metrics.md` and `graded.jsonl`. The sample file contains 20 synthetic answers, so the command above scores just those 20 questions. Without an API key you can still try the whole flow with the mock judge used by the tests:
-
-```bash
-python tests/mock_judge.py --port 8765 &
-mmeb score examples/predictions_sample.jsonl --output outputs/sample \
-    --judge-base-url http://127.0.0.1:8765/v1 --judge-model mock
-```
-
-Every command is also available as `python -m mmenterprise_bench ...` and as a wrapper in `scripts/` (`scripts/download_data.bash`, `scripts/score.bash`, ...). Set `MMEB_DATA_DIR` or pass `--dataset DIR` to keep the dataset somewhere other than `data/MMEnterprise-Bench`.
 
 ## Evaluate your own agent
 
-Your agent can be anything: an API model, a local VLM, a multi-step tool-using agent, in any language. The only contract is a predictions file, one JSON object per question:
+```bash
+mmeb export-contexts --retriever 2b --k 10 --output contexts.jsonl   # 1. inputs (optional): the paper's retrieved records per question
+# 2. run your agent and write predictions.jsonl: {"id": "p01::MU260919_03", "answer": "..."} per line
+mmeb score predictions.jsonl --output outputs/my_agent               # 3. LLM-judge accuracy (OPENAI_API_KEY)
+```
+
+`examples/your_own_agent.py` is a fill-in template; `examples/openai_compatible_agent.py` is a complete agent for any OpenAI-compatible endpoint.
+
+<details>
+<summary>Prediction format and what the score means</summary>
+
+One JSON object per question. `id` and `answer` (plain text) are required.
 
 ```json
-{"id": "p01::MU260919_03", "answer": "Not recorded. The 07:30 comparison only reports R@1."}
+{"id": "p01::MU260919_03", "answer": "Not recorded. The 07:30 comparison only reports R@1.", "retrieved_unit_ids": ["u00123", "u00456"]}
 ```
 
-Optional keys: `"retrieved_unit_ids": ["u00123", ...]` (the corpus units your retriever returned; enables Evidence Recall of *your* retrieval), and, for re-aggregating already-judged outputs, `"correct": true|false` + `"judge_reason"` with `--pre-judged`. Other keys are ignored and preserved in `graded.jsonl`.
+* `retrieved_unit_ids` (optional): corpus units your retriever returned; enables Evidence Recall of your retrieval.
+* Accuracy = 100 × correct / **all 1,613 questions**. Missing questions count as incorrect (reported as `missing`); `observed_accuracy` covers only submitted ones.
+* The judge (GPT-5.6 Luna, prompt in `mmenterprise_bench/prompts/judge_system.txt`) sees only the question, the reference answer and your answer. Judgments are cached, so re-runs are free.
+* Outputs: `metrics.json`, `metrics.md`, `graded.jsonl`, with breakdowns per category, task, answerability, evidence modality and evidence count.
+* `--pre-judged` re-aggregates files that already carry `correct` (for example the released baselines). `--limit N` is for smoke tests only.
 
-**Input.** Either use the paper's frozen contexts (first *k* hits of a released retriever, sorted chronologically) or do your own retrieval over the corpus:
+</details>
 
-```bash
-# Option A: export the paper's contexts (text + image paths) for an agent written in any language
-mmeb export-contexts --retriever 2b --k 10 --output contexts.jsonl
-```
+<details>
+<summary>Python API</summary>
 
 ```python
-# Option B: Python
 from mmenterprise_bench import load_dataset, build_context
 
-ds = load_dataset()                                   # auto-downloads if missing
-for row in ds.rows:                                   # question dicts: id, project, q, t, ...
-    context = build_context(ds, row, retriever="2b", k=10)   # [{unit_id, record_id, timestamp, text, image_path, image_sha256}, ...]
-    answer = my_agent(row["q"], context)              # or search ds.units yourself
+ds = load_dataset()                                            # downloads on first use
+for row in ds.rows:                                            # id, project, q, t, ...
+    records = build_context(ds, row, retriever="2b", k=10)     # [{unit_id, record_id, timestamp, text, image_path, ...}]
+    answer = my_agent(row["q"], records)                       # or search ds.units yourself
 ```
 
-`examples/your_own_agent.py` is a fill-in-the-blank template that writes `predictions.jsonl`; `examples/openai_compatible_agent.py` is a complete working agent (the paper's RAG reader) for any OpenAI-compatible endpoint.
+Context = first *k* hits of the released ranking, sorted chronologically, exactly as in the paper.
 
-**Scoring.**
+</details>
+
+<details>
+<summary>Another judge (vLLM, etc.) or no API key</summary>
 
 ```bash
-export OPENAI_API_KEY=...                      # or put it in .env (see .env.example)
-mmeb score predictions.jsonl --output outputs/my_agent
+mmeb score predictions.jsonl --judge-base-url http://127.0.0.1:8000/v1 --judge-model <served-model> --judge-api-key-env VLLM_API_KEY
 ```
 
-* Accuracy = 100 × correct / **all 1,613 questions**. Questions without a prediction count as incorrect and are reported as `missing`; `observed_accuracy` is over the submitted ones. Use `--limit N` / `--question-ids` only for smoke tests.
-* The judge sees only `{question, reference_answer, candidate_answer}`; its prompt is `mmenterprise_bench/prompts/judge_system.txt`. Judgments are cached under `<output>/cache/judgments/` keyed by their content, so re-runs are free.
-* Breakdowns: per category (Evidence Reasoning / Conflict Resolution / Unanswerability), per task (8), answerable vs unanswerable, evidence modality (text / image / multi) and evidence-record count (1 / 2 / 3+), plus Evidence Recall when `retrieved_unit_ids` is present.
-* Open-source judge: point `--judge-base-url` at any OpenAI-compatible server (for example vLLM) and set `--judge-model`; `--judge-api-key-env` names the variable holding its key (none needed for local servers). Results judged by a different model are not directly comparable with the paper's numbers.
-* `mmeb score predictions.jsonl --pre-judged` re-aggregates files that already carry `correct`, such as the released baselines.
-
-See [EVALUATION.md](EVALUATION.md) for the full protocol, options and output formats.
-
-## Reproduce the paper baselines
-
-`mmeb run-baseline` runs a registered reader over the frozen contexts, judges the answers and writes metrics. It is resumable (answers and judgments are cached by content) and supports all 60 paper conditions (10 readers × 2 retrievers × k ∈ {10, 50, 100}).
+Scores from a different judge are not directly comparable with the paper. To try the pipeline without any key:
 
 ```bash
-mmeb run-baseline --dry-run                                   # plan only, no API calls
-mmeb run-baseline --models luna --retrievers 2b --k 10        # default condition (OPENAI_API_KEY)
-mmeb run-baseline --models sol luna --retrievers 2b 8b --k 10 50 100
-mmeb run-baseline --models gemini38flash --limit 20 --output outputs/smoke   # GEMINI_API_KEY (+ OPENAI_API_KEY for the judge)
+python tests/mock_judge.py --port 8765 &
+mmeb score examples/predictions_sample.jsonl --limit 20 --judge-base-url http://127.0.0.1:8765/v1 --judge-model mock
 ```
 
-| Alias | Reader | Provider / key | Alias | Reader | Provider / key |
-| --- | --- | --- | --- | --- | --- |
-| `sol` | GPT-5.6 Sol | OpenAI · `OPENAI_API_KEY` | `qwen27b` | Qwen3.5-27B | local vLLM (2 GPUs) |
-| `luna` | GPT-5.6 Luna | OpenAI · `OPENAI_API_KEY` | `qwen9b` | Qwen3.5-9B | local vLLM |
-| `gemini38flash` | Gemini 3.8 Flash | Gemini · `GEMINI_API_KEY` | `qwen4b` | Qwen3.5-4B | local vLLM |
-| `gemini31pro` | Gemini 3.1 Pro | Gemini · `GEMINI_API_KEY` | `qwen2b` | Qwen3.5-2B | local vLLM |
-| | | | `internvl8b` | InternVL3.5-8B | local vLLM |
-| | | | `kimivl16b` | Kimi-VL-16B-A3B-Instruct | local vLLM |
+Full options: [EVALUATION.md](EVALUATION.md).
 
-Open-weight readers are served with vLLM 0.24.0 at the pinned checkpoint revisions in `mmenterprise_bench/configs/models.json`:
+</details>
+
+## Paper baselines
 
 ```bash
-python -m pip install -e ".[local]"                 # in a separate environment with CUDA
-mmeb serve --model qwen4b --gpus 0 --port 8000      # or: mmeb serve ... --print-command
+mmeb run-baseline --models luna --retrievers 2b --k 10     # resumable; OPENAI_API_KEY
+```
+
+Per-question outputs of all 10 models × 2 retrievers × k ∈ {10, 50, 100} are released at [🤗 Baselines](https://huggingface.co/datasets/MMEnterprise-Bench/baselines).
+
+<details>
+<summary>All readers, local models with vLLM, full grid</summary>
+
+| Alias | Reader | Key / server |
+| --- | --- | --- |
+| `sol`, `luna` | GPT-5.6 Sol, GPT-5.6 Luna | `OPENAI_API_KEY` |
+| `gemini38flash`, `gemini31pro` | Gemini 3.8 Flash, Gemini 3.1 Pro | `GEMINI_API_KEY` (+ `OPENAI_API_KEY` for the judge) |
+| `qwen27b`, `qwen9b`, `qwen4b`, `qwen2b` | Qwen3.5 27B / 9B / 4B / 2B | local vLLM (`qwen27b`: 2 GPUs) |
+| `internvl8b`, `kimivl16b` | InternVL3.5-8B, Kimi-VL-16B-A3B-Instruct | local vLLM |
+
+```bash
+pip install -e ".[local]"                                   # separate CUDA environment, vLLM 0.24.0
+mmeb serve --model qwen4b --gpus 0 --port 8000               # pinned checkpoint revisions in mmenterprise_bench/configs/models.json
 QWEN4B_BASE_URL=http://127.0.0.1:8000/v1 mmeb run-baseline --models qwen4b --retrievers 2b 8b --k 10 50 100
+mmeb run-baseline --config mmenterprise_bench/configs/full_grid.json   # all 60 conditions
+mmeb run-baseline --dry-run                                  # plan only
 ```
 
-The full grid is `mmeb run-baseline --config mmenterprise_bench/configs/full_grid.json`; re-running the same command resumes. `mmeb metrics` re-aggregates an output directory. The paper's per-question outputs for all 60 conditions are released at [🤗 MMEnterprise-Bench/baselines](https://huggingface.co/datasets/MMEnterprise-Bench/baselines) in the predictions format, so you can re-aggregate them without any API key (`mmeb score <file> --pre-judged`).
+</details>
 
-## Results
+<details>
+<summary>Results (Table 5: accuracy %, 2B retriever)</summary>
 
-Accuracy (%) on all 1,613 questions with the Qwen3-VL-Embedding-2B retriever (Table 5 of the paper). Extr. = Extraction, Attr. = Attribution, Comp. = Computation, Cmpr. = Comparison, Interp. = Interpretation, Cross = Cross-source, Temp. = Temporal, Unans. = Unanswerability.
+Extr. = Extraction, Attr. = Attribution, Comp. = Computation, Cmpr. = Comparison, Interp. = Interpretation, Cross = Cross-source, Temp. = Temporal, Unans. = Unanswerability. Questions per column: 268 / 80 / 310 / 212 / 232 / 212 / 212 / 87 / 1,613.
 
-**k = 10 retrieved records**
+**k = 10**
 
 | Model | Extr. | Attr. | Comp. | Cmpr. | Interp. | Cross | Temp. | Unans. | **Overall** |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -123,7 +127,7 @@ Accuracy (%) on all 1,613 questions with the Qwen3-VL-Embedding-2B retriever (Ta
 | InternVL3.5-8B | 63.4 | 51.3 | 31.9 | 23.1 | 27.2 | 15.6 | 19.3 | 36.8 | 32.7 |
 | Kimi-VL-16B-A3B-Instruct | 56.3 | 40.0 | 14.5 | 16.0 | 16.4 | 11.8 | 14.2 | 10.3 | 22.6 |
 
-**k = 50 retrieved records**
+**k = 50**
 
 | Model | Extr. | Attr. | Comp. | Cmpr. | Interp. | Cross | Temp. | Unans. | **Overall** |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -138,78 +142,71 @@ Accuracy (%) on all 1,613 questions with the Qwen3-VL-Embedding-2B retriever (Ta
 | InternVL3.5-8B | 66.4 | 53.8 | 35.5 | 28.8 | 31.0 | 24.1 | 23.1 | 29.9 | 36.6 |
 | Kimi-VL-16B-A3B-Instruct | 57.5 | 35.0 | 12.6 | 19.3 | 19.4 | 15.6 | 9.9 | 13.8 | 23.1 |
 
-Question counts per column: 268 / 80 / 310 / 212 / 232 / 212 / 212 / 87 / 1,613. Evidence Recall@k of the released retrievers (macro over the 1,526 answerable questions): 2B 41.3 / 57.0 / 64.8 and 8B 43.0 / 59.6 / 67.3 at k = 10 / 50 / 100. Results for k = 100, the 8B retriever and the evidence-modality breakdown are on the [project page](https://mlvlab.github.io/MMEnterprise-Bench/).
+Evidence Recall@k of the released retrievers (1,526 answerable questions): 2B 41.3 / 57.0 / 64.8, 8B 43.0 / 59.6 / 67.3 at k = 10 / 50 / 100. More results on the [project page](https://mlvlab.github.io/MMEnterprise-Bench/).
+
+</details>
 
 ## Dataset
-
-The dataset lives at [🤗 MMEnterprise-Bench/MMEnterprise-Bench](https://huggingface.co/datasets/MMEnterprise-Bench/MMEnterprise-Bench) (CC BY 4.0 for the annotations and simulated records; embedded figures and page images keep the rights of their source documents, listed in `seed_documents.json`). `mmeb download` fetches the raw layout the evaluator uses:
-
-```text
-data/MMEnterprise-Bench/
-├── qa/rows.json               # 1,613 questions: id, project, q, gold.answer, task, category, evidence, solution, ...
-├── corpus/units.json          # 7,140 retrieval records: id, record_id, text, image, timestamp, order, ...
-├── retrieval/                 # config.json + ranks_2b.json / ranks_8b.json (top-100 hits per question)
-├── media/                     # 1,415 original images (sha256-named PNG/JPG)
-├── projects.json              # 30 projects: people, clients, channels
-├── seed_documents.json        # the 30 public seed documents and their rights
-├── manifest.json · SHA256SUMS
-```
-
-The same data is also available as parquet configs for `datasets`:
 
 ```python
 from datasets import load_dataset
 questions = load_dataset("MMEnterprise-Bench/MMEnterprise-Bench", "questions", split="test")   # 1,613 rows
 corpus    = load_dataset("MMEnterprise-Bench/MMEnterprise-Bench", "corpus", split="test")      # 7,140 rows, `image` column
-ranks_2b  = load_dataset("MMEnterprise-Bench/MMEnterprise-Bench", "retrieval_2b", split="test")
 ```
 
-Field definitions are in [data/SCHEMA.md](data/SCHEMA.md); counts, taxonomy and sources in [data/README.md](data/README.md). `mmeb validate` checks checksums, references, labels and both rankings of a local copy.
+<details>
+<summary>Files and schema</summary>
+
+`mmeb download` fetches the raw layout used by the evaluator; the same data is on the Hub as parquet configs `questions`, `corpus`, `retrieval_2b`, `retrieval_8b`, `projects`, `seed_documents`.
+
+```text
+data/MMEnterprise-Bench/
+├── qa/rows.json            # 1,613 questions: id, project, q, gold.answer, task, category, evidence, solution, ...
+├── corpus/units.json       # 7,140 records: id, record_id, text, image, timestamp, order, ...
+├── retrieval/              # ranks_2b.json / ranks_8b.json: top-100 hits per question
+├── media/                  # 1,415 original images
+├── projects.json · seed_documents.json · manifest.json · SHA256SUMS
+```
+
+Field definitions: [data/SCHEMA.md](data/SCHEMA.md). Counts, taxonomy and source documents: [data/README.md](data/README.md). `mmeb validate` checks a local copy.
+
+</details>
 
 ## Generate new projects
 
-The generation pipeline turns any seed PDF into a new simulated project (workspace, timeline, rendered records, validated questions). It needs the `[generate]` extra and an OpenAI-compatible model:
-
 ```bash
-python -m pip install -e ".[generate]"
-./run_project.bash --dry-run                 # stage plan for the bundled NIST CSF 2.0 example seed
-./run_project.bash                           # OPENAI_API_KEY; resumable; outputs under data_generation_pipeline/outputs/
+pip install -e ".[generate]"
+./run_project.bash            # seed PDF -> simulated project -> validated questions (OPENAI_API_KEY; resumable)
 ```
 
-Configuration (`data_generation_pipeline/config.json`), stages, QA families and outputs are described in [data_generation_pipeline/README.md](data_generation_pipeline/README.md). Generated projects are new simulations; the released benchmark is the fixed snapshot on the Hub.
+<details>
+<summary>Details</summary>
 
-## Repository layout
+The default config (`data_generation_pipeline/config.json`) uses the bundled NIST CSF 2.0 PDF; point `seed_pdf` at any other document. Stages, QA families and outputs are described in [data_generation_pipeline/README.md](data_generation_pipeline/README.md). `./run_project.bash --dry-run` prints the stage plan. Generated projects are new simulations; the released benchmark is the fixed snapshot on the Hub.
+
+</details>
+
+<details>
+<summary>Repository layout, checks and tests</summary>
 
 ```text
-mmenterprise_bench/          # the `mmeb` package: data.py (dataset + frozen contexts), hub.py (download/verify),
-                             # judge.py, score.py (bring-your-own-agent scorer), contexts.py, pipeline.py (baselines),
-                             # providers.py (HTTP), serve.py (vLLM), validate.py, cli.py, configs/, prompts/
+mmenterprise_bench/          # `mmeb` package: download, validate, export-contexts, score, run-baseline, metrics, serve
 examples/                    # your_own_agent.py, openai_compatible_agent.py, predictions_sample.jsonl
-scripts/                     # bash wrappers, check.bash (all offline checks), check_release.py, package_release.py, hf/
-tests/                       # unit tests + mock_judge.py (OpenAI-compatible mock judge)
-data/                        # README.md, SCHEMA.md, validate.py; MMEnterprise-Bench/ is downloaded (git-ignored)
-data_generation_pipeline/    # seed PDF -> simulated project -> validated questions (+ README.md)
-docs/                        # project page (GitHub Pages) and figures
+scripts/                     # bash wrappers, check.bash, release tooling (hf/)
+tests/                       # unit tests + mock_judge.py
+data/                        # README.md, SCHEMA.md, validate.py (dataset itself is downloaded, git-ignored)
+data_generation_pipeline/    # seed PDF -> simulated project -> validated questions
+docs/                        # project page
 EVALUATION.md                # detailed evaluation guide
 ```
 
-## Checks and tests
-
 ```bash
-bash scripts/check.bash          # release scan, dataset validation, generation dry-run, generation tests, evaluation tests
-python -m unittest discover -s tests -v
+bash scripts/check.bash               # offline checks (no API key); also runs in CI
+python -m unittest discover -s tests
 ```
 
-No API key or network access is needed; the dataset checks are skipped (with a notice) when the dataset has not been downloaded. The same script runs in CI (`.github/workflows/check.yml`).
+</details>
 
 ## License
 
-Code is released under the [MIT License](LICENSE). The benchmark annotations and simulated records are released under CC BY 4.0; figures and page images embedded in the records keep the rights of their source documents (CC BY 4.0, US public domain, UK Open Government Licence 3.0, or used with the authors' permission), as listed per project in `seed_documents.json`.
-
-## Citation
-
-The paper is an arXiv preprint; a BibTeX entry will be added once it is listed.
-
-## Acknowledgements
-
-The 30 projects are grown from public seed documents (research papers, government reports, standards and guidance). Their titles, sources, identifiers and rights are listed in `seed_documents.json` and summarised in [data/README.md](data/README.md). The bundled example seed for the generation pipeline is *The NIST Cybersecurity Framework (CSF) 2.0*, a U.S. government publication.
+Code: [MIT](LICENSE). Benchmark annotations and simulated records: CC BY 4.0; embedded figures and page images keep the rights of their source documents (listed in `seed_documents.json`). The paper is an arXiv preprint; a BibTeX entry will be added once it is listed.
