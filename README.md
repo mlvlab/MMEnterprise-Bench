@@ -25,6 +25,18 @@ Jayun Ku<sup>1</sup> &nbsp;
 
 <img src="docs/static/figures/fig2_pipeline.png" width="95%" alt="MMEnterprise-Bench construction pipeline">
 
+<br>
+
+<a href="https://mlvlab.github.io/MMEnterprise-Bench/#video">
+  <img src="docs/static/figures/teaser_preview.gif" width="80%" alt="Preview of the MMEnterprise-Bench teaser video">
+</a>
+
+<p>
+  <a href="https://mlvlab.github.io/MMEnterprise-Bench/#video"><strong>▶ Watch the teaser video (2:11)</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://mlvlab.github.io/MMEnterprise-Bench/static/videos/mmenterprise-bench-teaser.mp4">Direct MP4</a>
+</p>
+
 </div>
 
 > **TL;DR** — **MMEnterprise-Bench** is a QA benchmark over simulated company workspaces (Slack, email, Notion, meeting notes, slides, PDF pages, charts) whose records are revised and contradicted over time. It tests **evidence reasoning**, **cross-source and temporal conflict resolution**, and **unanswerability** for enterprise agents.

@@ -415,7 +415,14 @@
       pre.code{padding:14px 14px;font-size:.78rem;}
       pre.code.has-copy{padding-right:14px;padding-top:46px;}
     }
-  </style>
+  
+    /* ---------- teaser video ---------- */
+    .video-sec{padding-top:28px;padding-bottom:48px;}
+    .video-player{
+      width:100%;height:auto;aspect-ratio:16/9;display:block;background:#000;
+      border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-h);
+    }
+</style>
 </head>
 <body>
 
@@ -429,6 +436,7 @@
       </div>
       <div class="nav-right">
         <div class="navlinks">
+          <a href="#video">Video</a>
           <a href="#abstract">Abstract</a>
           <a href="#tasks">Tasks</a>
           <a href="#benchmark">Benchmark</a>
@@ -473,6 +481,15 @@
       </div>
     </div>
   </header>
+
+  <section class="video-sec" id="video">
+    <div class="wrap">
+      <video class="video-player" controls playsinline preload="metadata" poster="static/videos/teaser_poster.jpg" aria-label="MMEnterprise-Bench teaser video">
+        <source src="static/videos/mmenterprise-bench-teaser.mp4" type="video/mp4">
+        Your browser does not support embedded video. <a href="static/videos/mmenterprise-bench-teaser.mp4">Watch the teaser video directly.</a>
+      </video>
+    </div>
+  </section>
 
   <!-- ======== ABSTRACT + TEASER ======== -->
   <section class="alt" id="abstract">
