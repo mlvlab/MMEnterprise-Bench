@@ -1,12 +1,32 @@
-# MMEnterprise-Bench
+<div align="center">
 
-**Evaluating Enterprise Agents over Evolving Multimodal Records**
+# MMEnterprise-Bench: Evaluating Enterprise Agents over Evolving Multimodal Records
 
-[Project page](https://mlvlab.github.io/MMEnterprise-Bench/) · Paper (arXiv, coming soon) · [🤗 Dataset](https://huggingface.co/datasets/MMEnterprise-Bench/MMEnterprise-Bench) · [🤗 Baselines](https://huggingface.co/datasets/MMEnterprise-Bench/baselines)
+<p>
+  <img src="https://img.shields.io/badge/arXiv-coming%20soon-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv (coming soon)">
+  <a href="https://mlvlab.github.io/MMEnterprise-Bench/"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20Project-Page-2b4f9e?style=for-the-badge" alt="Project Page"></a>
+  <a href="https://huggingface.co/datasets/MMEnterprise-Bench/MMEnterprise-Bench"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-ffce1c?style=for-the-badge" alt="Hugging Face Dataset"></a>
+  <a href="https://huggingface.co/datasets/MMEnterprise-Bench/baselines"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Baselines-ffce1c?style=for-the-badge" alt="Hugging Face Baselines"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-3da639?style=for-the-badge" alt="License"></a>
+</p>
 
-<img src="docs/static/figures/fig2_pipeline.png" alt="MMEnterprise-Bench construction pipeline" width="100%">
+**[Seohyun Lee](https://www.seohyunleee.com/)<sup>1,\*</sup> &nbsp;
+[Jongha Kim](https://jonghakim35.github.io/)<sup>2,\*</sup> &nbsp;
+[Dohwan Ko](https://ikodoh.github.io/)<sup>2</sup> &nbsp;
+[Seoung Choi](https://choisw0823.github.io)<sup>1</sup> &nbsp;
+Ji Soo Lee<sup>1</sup> &nbsp;
+[Hyunwoo J. Kim](https://www.hyunwoojkim.com/home)<sup>1,&dagger;</sup>**
 
-MMEnterprise-Bench is a QA benchmark over simulated company workspaces (Slack, email, Notion, meeting notes, slides, PDF pages, charts) whose records are revised and contradicted over time. It tests evidence reasoning, cross-source and temporal conflict resolution, and unanswerability.
+<sup>1</sup> KAIST &nbsp;&nbsp; <sup>2</sup> Korea University &nbsp;&nbsp;
+<sub>(\* equal contribution &nbsp; &dagger; corresponding author)</sub>
+
+<br>
+
+<img src="docs/static/figures/fig2_pipeline.png" width="95%" alt="MMEnterprise-Bench construction pipeline">
+
+</div>
+
+> **TL;DR** — **MMEnterprise-Bench** is a QA benchmark over simulated company workspaces (Slack, email, Notion, meeting notes, slides, PDF pages, charts) whose records are revised and contradicted over time. It tests **evidence reasoning**, **cross-source and temporal conflict resolution**, and **unanswerability** for enterprise agents.
 
 **1,613 questions** (1,526 answerable + 87 unanswerable) · **30 projects** · **7,140 records** (5,725 text + 1,415 visual) · **8 tasks** in 3 categories · frozen top-100 rankings from a 2B and an 8B retriever.
 
@@ -29,19 +49,15 @@ mmeb score predictions.jsonl --output outputs/my_agent               # 3. LLM-ju
 `examples/your_own_agent.py` is a fill-in template; `examples/openai_compatible_agent.py` is a complete agent for any OpenAI-compatible endpoint.
 
 <details>
-<summary>Prediction format and what the score means</summary>
+<summary>Prediction format</summary>
 
-One JSON object per question. `id` and `answer` (plain text) are required.
+One JSON object per question; `id` and `answer` are required, `retrieved_unit_ids` is optional (enables Evidence Recall of your retrieval).
 
 ```json
 {"id": "p01::MU260919_03", "answer": "Not recorded. The 07:30 comparison only reports R@1.", "retrieved_unit_ids": ["u00123", "u00456"]}
 ```
 
-* `retrieved_unit_ids` (optional): corpus units your retriever returned; enables Evidence Recall of your retrieval.
-* Accuracy = 100 × correct / **all 1,613 questions**. Missing questions count as incorrect (reported as `missing`); `observed_accuracy` covers only submitted ones.
-* The judge (GPT-5.6 Luna, prompt in `mmenterprise_bench/prompts/judge_system.txt`) sees only the question, the reference answer and your answer. Judgments are cached, so re-runs are free.
-* Outputs: `metrics.json`, `metrics.md`, `graded.jsonl`, with breakdowns per category, task, answerability, evidence modality and evidence count.
-* `--pre-judged` re-aggregates files that already carry `correct` (for example the released baselines). `--limit N` is for smoke tests only.
+Accuracy = correct / 1,613 (LLM judge, GPT-5.6 Luna by default). Outputs: `metrics.json`, `metrics.md`, `graded.jsonl`.
 
 </details>
 
@@ -57,8 +73,6 @@ for row in ds.rows:                                            # id, project, q,
     answer = my_agent(row["q"], records)                       # or search ds.units yourself
 ```
 
-Context = first *k* hits of the released ranking, sorted chronologically, exactly as in the paper.
-
 </details>
 
 <details>
@@ -68,14 +82,14 @@ Context = first *k* hits of the released ranking, sorted chronologically, exactl
 mmeb score predictions.jsonl --judge-base-url http://127.0.0.1:8000/v1 --judge-model <served-model> --judge-api-key-env VLLM_API_KEY
 ```
 
-Scores from a different judge are not directly comparable with the paper. To try the pipeline without any key:
+Without any API key (mock judge):
 
 ```bash
 python tests/mock_judge.py --port 8765 &
 mmeb score examples/predictions_sample.jsonl --limit 20 --judge-base-url http://127.0.0.1:8765/v1 --judge-model mock
 ```
 
-Full options: [EVALUATION.md](EVALUATION.md).
+More options: [EVALUATION.md](EVALUATION.md).
 
 </details>
 
@@ -85,7 +99,7 @@ Full options: [EVALUATION.md](EVALUATION.md).
 mmeb run-baseline --models luna --retrievers 2b --k 10     # resumable; OPENAI_API_KEY
 ```
 
-Per-question outputs of all 10 models × 2 retrievers × k ∈ {10, 50, 100} are released at [🤗 Baselines](https://huggingface.co/datasets/MMEnterprise-Bench/baselines).
+All paper outputs (10 models × 2 retrievers × k ∈ {10, 50, 100}): [🤗 Baselines](https://huggingface.co/datasets/MMEnterprise-Bench/baselines).
 
 <details>
 <summary>All readers, local models with vLLM, full grid</summary>
@@ -157,7 +171,7 @@ corpus    = load_dataset("MMEnterprise-Bench/MMEnterprise-Bench", "corpus", spli
 <details>
 <summary>Files and schema</summary>
 
-`mmeb download` fetches the raw layout used by the evaluator; the same data is on the Hub as parquet configs `questions`, `corpus`, `retrieval_2b`, `retrieval_8b`, `projects`, `seed_documents`.
+Parquet configs on the Hub: `questions`, `corpus`, `retrieval_2b`, `retrieval_8b`, `projects`, `seed_documents`. Raw layout (`mmeb download`):
 
 ```text
 data/MMEnterprise-Bench/
@@ -168,7 +182,7 @@ data/MMEnterprise-Bench/
 ├── projects.json · seed_documents.json · manifest.json · SHA256SUMS
 ```
 
-Field definitions: [data/SCHEMA.md](data/SCHEMA.md). Counts, taxonomy and source documents: [data/README.md](data/README.md). `mmeb validate` checks a local copy.
+Schema: [data/SCHEMA.md](data/SCHEMA.md) · sources and counts: [data/README.md](data/README.md).
 
 </details>
 
@@ -182,7 +196,7 @@ pip install -e ".[generate]"
 <details>
 <summary>Details</summary>
 
-The default config (`data_generation_pipeline/config.json`) uses the bundled NIST CSF 2.0 PDF; point `seed_pdf` at any other document. Stages, QA families and outputs are described in [data_generation_pipeline/README.md](data_generation_pipeline/README.md). `./run_project.bash --dry-run` prints the stage plan. Generated projects are new simulations; the released benchmark is the fixed snapshot on the Hub.
+Set `seed_pdf` in `data_generation_pipeline/config.json` (default: the bundled NIST CSF 2.0 PDF). Stages and outputs: [data_generation_pipeline/README.md](data_generation_pipeline/README.md).
 
 </details>
 
