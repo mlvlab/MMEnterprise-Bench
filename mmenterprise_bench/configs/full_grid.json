@@ -1,0 +1,45 @@
+{
+  "dataset": "data/MMEnterprise-Bench",
+  "output": "outputs/full_grid",
+  "models": [
+    "sol",
+    "luna",
+    "gemini38flash",
+    "gemini31pro",
+    "qwen27b",
+    "qwen9b",
+    "qwen4b",
+    "qwen2b",
+    "internvl8b",
+    "kimivl16b"
+  ],
+  "retrievers": [
+    "2b",
+    "8b"
+  ],
+  "k": [
+    10,
+    50,
+    100
+  ],
+  "concurrency": 8,
+  "judge_concurrency": 8,
+  "timeout_seconds": 180,
+  "max_attempts": 5,
+  "capacity_errors_as_incorrect": true,
+  "model_overrides": {},
+  "judge": {
+    "provider": "openai",
+    "model_id": "gpt-5.6-luna",
+    "api_key_env": "OPENAI_API_KEY",
+    "base_url": "https://api.openai.com/v1",
+    "generation": {
+      "reasoning_effort": "low",
+      "max_completion_tokens": 4096,
+      "store": false,
+      "response_format": {
+        "type": "json_object"
+      }
+    }
+  }
+}

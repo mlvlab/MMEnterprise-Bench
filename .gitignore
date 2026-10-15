@@ -1,0 +1,33 @@
+# secrets and local environments
+.env
+.env.*
+!.env.example
+.venv*/
+venv*/
+
+# the released dataset is downloaded from the Hub (scripts/download_data.bash)
+data/MMEnterprise-Bench/
+
+# run outputs
+outputs/
+runs/
+results/
+result/
+contexts.jsonl
+predictions.jsonl
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# misc
+*.log
+*.zip
+*.tar.gz
+.DS_Store

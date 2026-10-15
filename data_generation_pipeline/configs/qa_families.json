@@ -1,0 +1,52 @@
+{
+  "families": [
+    {
+      "name": "Extraction",
+      "category": "Evidence Reasoning",
+      "definition": "Extract entities or values explicitly stated in text, tables, or figures.",
+      "examples": ["Which model does BLiM use?"]
+    },
+    {
+      "name": "Attribution",
+      "category": "Evidence Reasoning",
+      "definition": "Identify the source, requester, author, or communicator of information.",
+      "examples": ["Who sent Nora Bell's welcome email?"]
+    },
+    {
+      "name": "Computation",
+      "category": "Evidence Reasoning",
+      "definition": "Apply question-specified calculations to recorded values.",
+      "examples": ["How much does the deficit-to-GDP share increase?"]
+    },
+    {
+      "name": "Comparison",
+      "category": "Evidence Reasoning",
+      "definition": "Compare results or properties to identify differences, rankings, or choices.",
+      "examples": ["Which frame setting fits the latency budget?"]
+    },
+    {
+      "name": "Interpretation",
+      "category": "Evidence Reasoning",
+      "definition": "Draw conclusions or assess claims using recorded evidence.",
+      "examples": ["Do the counts support a 12-risk increase?"]
+    },
+    {
+      "name": "Cross-source",
+      "category": "Conflict Resolution",
+      "definition": "Identify conflicting information across records or determine which value applies.",
+      "examples": ["Which action-log deadline applies after the correction?"]
+    },
+    {
+      "name": "Temporal",
+      "category": "Conflict Resolution",
+      "definition": "Identify information at a specified time or trace its revisions.",
+      "examples": ["What was the deadline at 14:00?"]
+    },
+    {
+      "name": "Unanswerability",
+      "category": "Unanswerability",
+      "definition": "Identify missing information or unsupported premises.",
+      "examples": ["What is the measured serving cost?"]
+    }
+  ]
+}

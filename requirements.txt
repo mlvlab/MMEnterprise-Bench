@@ -1,0 +1,6 @@
+# Evaluation only needs huggingface_hub (dataset download); the judge/reader HTTP code uses the standard library.
+huggingface_hub>=0.34
+# Optional extras (see pyproject.toml):
+#   pip install -e ".[hf]"        -> datasets, pyarrow   (load_dataset / parquet examples)
+#   pip install -e ".[generate]"  -> openai, pydantic, PyMuPDF, Pillow, matplotlib, fonttools (data generation pipeline)
+#   pip install -e ".[local]"     -> vllm==0.24.0        (serve open-weight readers locally)
