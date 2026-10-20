@@ -41,6 +41,46 @@ class ValidateMetricsTest(unittest.TestCase):
         summary = validate_metrics(copy.deepcopy(SAMPLE_METRICS), allow_pre_judged=True)
         self.assertTrue(summary["pre_judged"])
 
+    def test_rejects_wrong_category_or_answerability_n(self):
+        sample = fresh_sample()
+        sample["categories"]["Evidence Reasoning"]["n"] = 1000
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("categories.Evidence Reasoning.n", str(ctx.exception))
+        sample = fresh_sample()
+        sample["answerability"]["answerable"]["n"] = 1500
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("answerability.answerable.n", str(ctx.exception))
+
+    def test_rejects_inconsistent_evidence_groups(self):
+        sample = fresh_sample()
+        sample["evidence_modality"]["text"]["correct"] = 10
+        sample["evidence_modality"]["text"]["accuracy"] = round(100 * 10 / 693, 2)
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("evidence_modality", str(ctx.exception))
+        sample = fresh_sample()
+        sample["evidence_count"]["3+"]["n"] = 300
+        sample["evidence_count"]["3+"]["submitted"] = 300
+        sample["evidence_count"]["3+"]["accuracy"] = round(100 * 75 / 300, 2)
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("sum of 'evidence_count' n", str(ctx.exception))
+
+    def test_deeply_nested_json_is_rejected_cleanly(self):
+        data = ("[" * 200000).encode("utf-8")
+        with self.assertRaises(ValidationError) as ctx:
+            load_metrics_bytes(data)
+        self.assertIn("not valid", str(ctx.exception))
+        fd, path = tempfile.mkstemp(suffix=".jsonl")
+        with os.fdopen(fd, "w") as handle:
+            handle.write('{"id": "a", "answer": "b"}\n' + "[" * 200000 + "\n")
+        self.addCleanup(os.remove, path)
+        with self.assertRaises(ValidationError) as ctx:
+            validate_predictions(path)
+        self.assertIn("line 2", str(ctx.exception))
+
     def test_rejects_tampered_accuracy(self):
         sample = fresh_sample()
         sample["accuracy"] = 60.0
@@ -94,6 +134,55 @@ class ValidateMetricsTest(unittest.TestCase):
         sample["accuracy"] = None
         with self.assertRaises(ValidationError):
             validate_metrics(sample)
+
+    def test_rejects_nan_and_infinity(self):
+        for literal in ("NaN", "Infinity", "-Infinity"):
+            text = json.dumps(fresh_sample()).replace('"accuracy": 52.63', f'"accuracy": {literal}', 1)
+            with self.assertRaises(ValidationError) as ctx:
+                load_metrics_bytes(text.encode("utf-8"))
+            self.assertIn("not valid", str(ctx.exception))
+        sample = fresh_sample()
+        sample["accuracy"] = float("nan")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("'accuracy' must be a number", str(ctx.exception))
+        sample = fresh_sample()
+        sample["categories"]["Evidence Reasoning"]["accuracy"] = float("inf")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("categories.Evidence Reasoning.accuracy", str(ctx.exception))
+
+    def test_evidence_groups_are_bounded(self):
+        sample = fresh_sample()
+        sample["evidence_modality"]["text"]["n"] = 600
+        sample["evidence_modality"]["text"]["submitted"] = 600
+        sample["evidence_modality"]["text"]["correct"] = 400
+        sample["evidence_modality"]["text"]["accuracy"] = round(100 * 400 / 600, 2)
+        for i in range(93):
+            sample["evidence_modality"][f"bucket{i}"] = {"n": 1, "submitted": 1, "missing": 0, "correct": 0,
+                                                         "accuracy": 0.0}
+        sample["evidence_modality"]["bucket0"]["correct"] = 60
+        sample["evidence_modality"]["bucket0"]["n"] = sample["evidence_modality"]["bucket0"]["submitted"] = 60
+        sample["evidence_modality"]["bucket0"]["accuracy"] = 100.0
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("at most 32", str(ctx.exception))
+        sample = fresh_sample()
+        sample["evidence_count"]["<img src=x>"] = {"n": 0, "submitted": 0, "missing": 0, "correct": 0, "accuracy": 0}
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("invalid names", str(ctx.exception))
+        sample = fresh_sample()
+        sample["evidence_count"]["empty"] = {"n": 0, "submitted": 0, "missing": 0, "correct": 0, "accuracy": 0}
+        with self.assertRaises(ValidationError) as ctx:
+            validate_metrics(sample)
+        self.assertIn("n must be > 0", str(ctx.exception))
+
+    def test_summary_keeps_exact_counts(self):
+        counts = validate_metrics(fresh_sample())["counts"]
+        self.assertEqual(counts["overall"], {"correct": 849, "n": 1613})
+        self.assertEqual(counts["categories"]["ER"], {"correct": 646, "n": 1102})
+        self.assertEqual(counts["tasks"]["Attribution"], {"correct": 49, "n": 80})
 
     def test_rejects_non_object_and_oversize(self):
         with self.assertRaises(ValidationError):

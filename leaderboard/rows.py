@@ -20,10 +20,17 @@ ALL_SETTINGS = "All"
 PAPER_LINK = "https://github.com/mlvlab/MMEnterprise-Bench"
 PAPER_ORG = "MMEnterprise-Bench authors"
 PAPER_JUDGE = "gpt-5.6-luna"
+PAPER_DATE = "2026-10-20"      # release date of the paper baselines; keeps seeded rows stable across reseeds
 
 
 def setting_for(retriever: str, k: int) -> str:
     return f"Released retrieval {retriever.upper()} · k={k}"
+
+
+def short_setting(setting: str) -> str:
+    """Compact table label: 'Released retrieval 2B · k=10' -> '2B · k=10'; other settings unchanged."""
+    prefix = "Released retrieval "
+    return setting[len(prefix):] if (setting or "").startswith(prefix) else (setting or "")
 
 
 def build_row(*, row_id: str, model: str, organization: str, link: str, setting: str, judge: str, date: str,
@@ -47,6 +54,8 @@ def build_row(*, row_id: str, model: str, organization: str, link: str, setting:
         "evidence_modality": summary.get("evidence_modality"),
         "evidence_count": summary.get("evidence_count"),
         "retrieval_recall": summary.get("retrieval_recall"),
+        # exact correct/n per group: the tables round these half-up to one decimal (matches the paper tables)
+        "counts": summary.get("counts"),
         "notes": notes or "",
         "hidden": False,
     }

@@ -48,8 +48,11 @@ listed only after a maintainer approves it.
 
 The upload must be an unmodified `mmeb score` output over the full benchmark: 1,613 questions, the fixed task and
 category sizes, internally consistent counts (`sum(tasks.correct) == correct`, `accuracy == 100 * correct / 1613`),
-and a fresh judge run (`judge.pre_judged` must be false; re-aggregated files are refused). Missing predictions count
-as incorrect. Limits: `metrics.json` up to 1 MB, `predictions.jsonl` up to 25 MB, 5 submissions per contact per day.
+and a fresh judge run (`judge.pre_judged` must be false; re-aggregated files are refused). Category, answerability
+and evidence-group sizes are pinned too (1,102 / 424 / 87; 1,526 answerable). Missing predictions count as
+incorrect. Limits: `metrics.json` up to 1 MB, `predictions.jsonl` up to 25 MB (larger uploads are refused before
+they are stored), 5 submissions per contact per day (`+tags` and dots in the address do not count as a new
+contact), 10 per client per hour and 30 per hour overall. Links must be plain `http(s)` URLs.
 
 ## Settings
 
@@ -62,8 +65,15 @@ as incorrect. Limits: `metrics.json` up to 1 MB, `predictions.jsonl` up to 25 MB
 ## For maintainers
 
 The Space reads `HF_TOKEN`, `ADMIN_PASSWORD`, `QUEUE_REPO`, `RESULTS_REPO` and `STORAGE=hf` from its secrets and
-variables. Submissions are stored in the private queue dataset as `submissions/<utc-timestamp>_<slug>/{meta.json,
-metrics.json, predictions.jsonl}`; approved rows are appended to `results.jsonl` in the results dataset. The
-**Admin** tab (password) lists pending entries with the parsed headline numbers and lets you approve, reject (with a
-reason) or hide rows. Source code and tests: `leaderboard/` in the GitHub repository; `python deploy.py` recreates
-the repos, seeds the paper baselines and uploads the app.
+variables (inside a Space, `STORAGE` defaults to `hf`). Use a long random `ADMIN_PASSWORD`: wrong guesses are
+delayed and a client that fails ten times is locked out for five minutes (per client, so nobody can lock the
+owner out). Submissions are stored in the private queue dataset
+as `submissions/<utc-timestamp>_<slug>/{meta.json, metrics.json, predictions.jsonl}`; approved rows are appended to
+`results.jsonl` in the results dataset (every rewrite is a `parent_commit`-checked commit, so concurrent approvals
+never drop a row). The **Admin** tab (password) lists pending entries with the parsed headline numbers and lets you
+approve, reject (with a reason) or hide rows; error details go to the Space logs. Source code and tests:
+`leaderboard/` in the GitHub repository; `python deploy.py` recreates the repos, seeds the paper baselines (dated
+`PAPER_DATE` from `rows.py`; `--reseed` rewrites the paper rows and keeps community rows) and uploads the app.
+Tables show `100 * correct / n` rounded half-up to one decimal from the exact counts stored in each row (the
+paper's convention). Optional environment overrides: `MAX_PER_CONTACT_PER_DAY`,
+`MAX_PER_CLIENT_PER_HOUR`, `MAX_GLOBAL_PER_HOUR`, `ALLOW_PRE_JUDGED=1`.

@@ -3,7 +3,7 @@
     HF_TOKEN=... ADMIN_PASSWORD=... python deploy.py --baselines path/to/baselines_metrics.json
 
 Steps: private dataset repos (queue + results) -> seed results.jsonl from the paper baselines when it does not
-exist yet (``--reseed`` overwrites) -> private Gradio Space -> upload this folder (without tests) -> secrets
+exist yet (``--reseed`` replaces the paper rows and keeps community rows) -> private Gradio Space -> upload this folder (without tests) -> secrets
 HF_TOKEN / ADMIN_PASSWORD and variables QUEUE_REPO / RESULTS_REPO / STORAGE -> restart -> wait until RUNNING.
 Secrets are read from the environment only and never written to disk or printed.
 """
@@ -21,10 +21,12 @@ from huggingface_hub import HfApi
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+from rows import PAPER_DATE  # noqa: E402
 from seed_results import seed_rows  # noqa: E402
-from storage import results_to_jsonl  # noqa: E402
+from storage import results_from_jsonl, results_to_jsonl  # noqa: E402
 
-IGNORE = ["tests/*", "tests/**", "__pycache__/*", "**/__pycache__/*", "*.pyc", ".pytest_cache/*", "*.png"]
+IGNORE = ["tests/*", "tests/**", "__pycache__/*", "**/__pycache__/*", "*.pyc", ".pytest_cache/*", ".pytest_cache/**",
+          ".ruff_cache/*", ".ruff_cache/**", "*.png", ".*"]
 
 QUEUE_README = """---
 license: mit
@@ -60,17 +62,26 @@ def ensure_dataset(api: HfApi, repo_id: str, readme: str) -> None:
     print(f"dataset ready: https://huggingface.co/datasets/{repo_id} (private={info.private})")
 
 
-def seed_results(api: HfApi, repo_id: str, baselines: str | None, reseed: bool) -> None:
+def seed_results(api: HfApi, repo_id: str, baselines: str | None, reseed: bool, date: str = PAPER_DATE) -> None:
     exists = api.file_exists(repo_id, "results.jsonl", repo_type="dataset")
     if exists and not reseed:
         print("results.jsonl already present; not reseeding (use --reseed to overwrite)")
         return
     if not baselines:
         raise SystemExit("results.jsonl is missing: pass --baselines <metrics.json> to seed it")
-    rows = seed_rows(json.loads(Path(baselines).read_text(encoding="utf-8")))
-    api.upload_file(path_or_fileobj=results_to_jsonl(rows).encode("utf-8"), path_in_repo="results.jsonl",
-                    repo_id=repo_id, repo_type="dataset", commit_message=f"seed {len(rows)} paper baseline rows")
-    print(f"seeded {len(rows)} paper rows into {repo_id}")
+    rows = seed_rows(json.loads(Path(baselines).read_text(encoding="utf-8")), date)
+    kept = []
+    if exists:   # reseed: replace the paper rows, keep every community row (approved and hidden alike)
+        from huggingface_hub import hf_hub_download
+
+        current = Path(hf_hub_download(repo_id, "results.jsonl", repo_type="dataset", token=api.token,
+                                       force_download=True)).read_text(encoding="utf-8")
+        paper_ids = {r["id"] for r in rows}
+        kept = [r for r in results_from_jsonl(current) if r.get("source") != "paper" and r.get("id") not in paper_ids]
+    api.upload_file(path_or_fileobj=results_to_jsonl(rows + kept).encode("utf-8"), path_in_repo="results.jsonl",
+                    repo_id=repo_id, repo_type="dataset",
+                    commit_message=f"seed {len(rows)} paper baseline rows (+{len(kept)} community rows kept)")
+    print(f"seeded {len(rows)} paper rows into {repo_id} ({len(kept)} community rows kept)")
 
 
 def wait_running(api: HfApi, space: str, timeout: float) -> str:
@@ -97,7 +108,9 @@ def main(argv=None):
     parser.add_argument("--results-repo",
                         default=os.environ.get("RESULTS_REPO", "MMEnterprise-Bench/leaderboard-results"))
     parser.add_argument("--baselines", default=None, help="baselines metrics.json used to seed results.jsonl")
-    parser.add_argument("--reseed", action="store_true", help="overwrite results.jsonl with the paper baselines")
+    parser.add_argument("--reseed", action="store_true",
+                        help="rewrite the paper rows of results.jsonl from --baselines (community rows are kept)")
+    parser.add_argument("--date", default=PAPER_DATE, help="date stored on seeded paper rows")
     parser.add_argument("--no-wait", action="store_true", help="do not wait for the Space to reach RUNNING")
     parser.add_argument("--timeout", type=float, default=900, help="seconds to wait for RUNNING")
     args = parser.parse_args(argv)
@@ -110,7 +123,7 @@ def main(argv=None):
 
     ensure_dataset(api, args.queue_repo, QUEUE_README)
     ensure_dataset(api, args.results_repo, RESULTS_README)
-    seed_results(api, args.results_repo, args.baselines, args.reseed)
+    seed_results(api, args.results_repo, args.baselines, args.reseed, args.date)
 
     api.create_repo(args.space, repo_type="space", space_sdk="gradio", private=True, exist_ok=True)
     info = api.repo_info(args.space, repo_type="space")

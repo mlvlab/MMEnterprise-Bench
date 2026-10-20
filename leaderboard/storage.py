@@ -12,7 +12,11 @@ Layout (identical in both):
     <queue>/submissions/<utc-timestamp>_<slug>/predictions.jsonl   (optional)
     <results>/results.jsonl                                      one approved row per line (``hidden`` rows kept, flagged)
 
-Select the backend with ``get_storage()``: env ``STORAGE=hf`` or ``STORAGE=local`` (default local, root ``LOCAL_STORAGE_DIR``).
+Select the backend with ``get_storage()``: env ``STORAGE=hf`` or ``STORAGE=local`` (default: ``hf`` inside a Space,
+i.e. when ``SPACE_ID`` is set, otherwise ``local`` with root ``LOCAL_STORAGE_DIR``).
+
+Concurrency: every read-modify-write of ``results.jsonl`` runs under a process-wide lock, and the Hub backend
+additionally commits with ``parent_commit`` (retrying on a 412 conflict) so concurrent writers never lose a row.
 """
 from __future__ import annotations
 
@@ -21,6 +25,8 @@ import os
 import re
 import shutil
 import tempfile
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
@@ -28,6 +34,16 @@ from typing import Iterable
 SUBMISSIONS_PREFIX = "submissions"
 RESULTS_FILE = "results.jsonl"
 STATUSES = ("pending", "approved", "rejected", "hidden")
+SUBMISSION_ID_RE = re.compile(r"^[0-9]{8}T[0-9]{6}Z_[a-z0-9-]+$")
+ROW_ID_RE = re.compile(r"^(paper_[a-z0-9_-]+|[0-9]{8}T[0-9]{6}Z_[a-z0-9-]+)$")
+WRITE_RETRIES = 5
+
+# One lock per process: the Gradio app runs handlers on several threads, and results.jsonl is rewritten whole.
+_RESULTS_LOCK = threading.RLock()
+
+
+class ConflictError(RuntimeError):
+    """The results file changed between read and write (Hub backend); the caller re-reads and retries."""
 
 
 def utc_now() -> datetime:
@@ -51,12 +67,31 @@ def submission_timestamp(submission_id: str) -> datetime | None:
         return None
 
 
+def normalize_contact(email: str) -> str:
+    """Lower-case, drop a ``+tag`` and dots in the local part, so ``A.b+x@Example.org`` == ``ab@example.org``."""
+    email = (email or "").strip().lower()
+    if "@" not in email:
+        return email
+    local, _, domain = email.rpartition("@")
+    local = local.split("+", 1)[0].replace(".", "")
+    return f"{local}@{domain}"
+
+
+def is_valid_submission_id(submission_id: str) -> bool:
+    return bool(SUBMISSION_ID_RE.match(submission_id or ""))
+
+
+def is_valid_row_id(row_id: str) -> bool:
+    return bool(ROW_ID_RE.match(row_id or ""))
+
+
 def dumps(obj) -> str:
     return json.dumps(obj, ensure_ascii=False, indent=2) + "\n"
 
 
 def results_to_jsonl(rows: Iterable[dict]) -> str:
-    return "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
+    """Strict JSON lines (``allow_nan=False``: a NaN would make the file unreadable for non-Python consumers)."""
+    return "".join(json.dumps(row, ensure_ascii=False, allow_nan=False) + "\n" for row in rows)
 
 
 def results_from_jsonl(text: str) -> list[dict]:
@@ -87,7 +122,22 @@ class Storage:
         raise NotImplementedError
 
     def write_results(self, rows: list[dict]) -> None:
+        """Replace results.jsonl. Backends may raise ConflictError when the file changed since read_results()."""
         raise NotImplementedError
+
+    def modify_results(self, mutate) -> list[dict]:
+        """Serialized read -> ``mutate(rows)`` -> write; retries on a Hub conflict. Returns the rows written."""
+        with _RESULTS_LOCK:
+            for attempt in range(WRITE_RETRIES):
+                rows = mutate(self.read_results())
+                try:
+                    self.write_results(rows)
+                    return rows
+                except ConflictError:
+                    if attempt == WRITE_RETRIES - 1:
+                        raise
+                    time.sleep(0.5 * (attempt + 1))
+        raise RuntimeError("unreachable")
 
     # --- shared helpers --------------------------------------------------------------------------
     def list_submissions(self, status: str | None = None) -> list[dict]:
@@ -113,26 +163,35 @@ class Storage:
         return metas
 
     def count_recent_by_contact(self, contact_email: str, hours: int = 24) -> int:
-        needle = (contact_email or "").strip().lower()
+        """Submissions in the window from the same contact, comparing normalized addresses (+tags, dots ignored)."""
+        needle = normalize_contact(contact_email)
         since = utc_now() - timedelta(hours=hours)
         return sum(1 for meta in self.submissions_since(since)
-                   if (meta.get("contact_email") or "").strip().lower() == needle)
+                   if normalize_contact(meta.get("contact_email")) == needle)
 
     def append_result(self, row: dict) -> None:
-        rows = [r for r in self.read_results() if r.get("id") != row.get("id")]
-        rows.append(row)
-        self.write_results(rows)
+        def mutate(rows):
+            rows = [r for r in rows if r.get("id") != row.get("id")]
+            rows.append(row)
+            return rows
+        self.modify_results(mutate)
 
     def set_result_hidden(self, row_id: str, hidden: bool) -> bool:
-        rows = self.read_results()
-        found = False
-        for row in rows:
-            if row.get("id") == row_id:
-                row["hidden"] = hidden
-                found = True
-        if found:
-            self.write_results(rows)
-        return found
+        found = []
+
+        def mutate(rows):
+            found.clear()
+            for row in rows:
+                if row.get("id") == row_id:
+                    row["hidden"] = hidden
+                    found.append(row)
+            return rows
+
+        with _RESULTS_LOCK:
+            if not any(r.get("id") == row_id for r in self.read_results()):
+                return False
+            self.modify_results(mutate)
+        return bool(found)
 
     def visible_results(self) -> list[dict]:
         return [row for row in self.read_results() if not row.get("hidden")]
@@ -182,9 +241,21 @@ class LocalStorage(Storage):
         return results_from_jsonl(self.results_path.read_text(encoding="utf-8"))
 
     def write_results(self, rows):
-        tmp = self.results_path.with_suffix(".tmp")
-        tmp.write_text(results_to_jsonl(rows), encoding="utf-8")
-        tmp.replace(self.results_path)
+        with _RESULTS_LOCK:
+            handle = tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=self.results_path.parent,
+                                                 prefix=".results-", suffix=".tmp", delete=False)
+            try:
+                with handle:
+                    handle.write(results_to_jsonl(rows))
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(handle.name, self.results_path)
+            except BaseException:
+                try:
+                    os.unlink(handle.name)
+                except OSError:
+                    pass
+                raise
 
 
 class HfStorage(Storage):
@@ -197,12 +268,24 @@ class HfStorage(Storage):
         self.results_repo = results_repo
         self.token = token
         self.api = HfApi(token=token)
+        # commit the last read_results() came from, per thread: a public page load on another thread must not
+        # replace the parent commit of an admin's read -> write inside modify_results()
+        self._local = threading.local()
+
+    @property
+    def _results_sha(self) -> str | None:
+        return getattr(self._local, "results_sha", None)
+
+    @_results_sha.setter
+    def _results_sha(self, value: str | None) -> None:
+        self._local.results_sha = value
 
     # helpers
-    def _download(self, repo_id: str, filename: str) -> str:
+    def _download(self, repo_id: str, filename: str, revision: str | None = None) -> str:
         from huggingface_hub import hf_hub_download
 
-        path = hf_hub_download(repo_id=repo_id, filename=filename, repo_type="dataset", token=self.token)
+        path = hf_hub_download(repo_id=repo_id, filename=filename, repo_type="dataset", token=self.token,
+                               revision=revision)
         return Path(path).read_text(encoding="utf-8")
 
     def _exists(self, repo_id: str, filename: str) -> bool:
@@ -255,18 +338,32 @@ class HfStorage(Storage):
 
     # results
     def read_results(self):
-        if not self._exists(self.results_repo, RESULTS_FILE):
+        info = self.api.repo_info(self.results_repo, repo_type="dataset")
+        sha = info.sha
+        if not any(getattr(s, "rfilename", None) == RESULTS_FILE for s in (info.siblings or [])):
+            self._results_sha = sha
             return []
-        return results_from_jsonl(self._download(self.results_repo, RESULTS_FILE))
+        rows = results_from_jsonl(self._download(self.results_repo, RESULTS_FILE, revision=sha))
+        self._results_sha = sha
+        return rows
 
     def write_results(self, rows):
-        self.api.upload_file(path_or_fileobj=results_to_jsonl(rows).encode("utf-8"), path_in_repo=RESULTS_FILE,
-                             repo_id=self.results_repo, repo_type="dataset",
-                             commit_message=f"results: {len(rows)} rows")
+        from huggingface_hub.errors import HfHubHTTPError
+
+        try:
+            self.api.upload_file(path_or_fileobj=results_to_jsonl(rows).encode("utf-8"), path_in_repo=RESULTS_FILE,
+                                 repo_id=self.results_repo, repo_type="dataset",
+                                 commit_message=f"results: {len(rows)} rows", parent_commit=self._results_sha)
+        except HfHubHTTPError as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if status == 412:
+                raise ConflictError(f"results.jsonl changed since it was read (parent {self._results_sha})") from exc
+            raise
 
 
 def get_storage() -> Storage:
-    backend = os.environ.get("STORAGE", "local").lower()
+    default = "hf" if os.environ.get("SPACE_ID") else "local"   # inside a Space, local /tmp storage would be lost
+    backend = os.environ.get("STORAGE", default).lower()
     if backend == "hf":
         queue = os.environ.get("QUEUE_REPO", "MMEnterprise-Bench/leaderboard-queue")
         results = os.environ.get("RESULTS_REPO", "MMEnterprise-Bench/leaderboard-results")

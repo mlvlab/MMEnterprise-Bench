@@ -7,6 +7,8 @@ scorer and checks that it is structurally identical to a fresh ``mmeb score`` ru
 from __future__ import annotations
 
 import json
+import math
+import re
 from typing import Any
 
 N_QUESTIONS = 1613
@@ -24,8 +26,15 @@ TASK_N = {
     "Unanswerability": 87,
 }
 TASKS = list(TASK_N)
-CATEGORIES = ["Evidence Reasoning", "Conflict Resolution", "Unanswerability"]
+CATEGORY_N = {"Evidence Reasoning": 1102, "Conflict Resolution": 424, "Unanswerability": 87}
+CATEGORIES = list(CATEGORY_N)
+ANSWERABILITY_N = {"answerable": 1526, "unanswerable": 87}
+N_ANSWERABLE = ANSWERABILITY_N["answerable"]
+# evidence_modality / evidence_count are computed over the answerable questions only (see mmeb score)
+EVIDENCE_GROUPS = ["evidence_modality", "evidence_count"]
 CATEGORY_SHORT = {"Evidence Reasoning": "ER", "Conflict Resolution": "CR", "Unanswerability": "UNS"}
+MAX_EVIDENCE_ENTRIES = 32                 # scorer buckets per evidence group (text/image/multi, 1/2/3+)
+EVIDENCE_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _+./-]{0,31}$")
 REQUIRED_TOP = ["questions", "n", "submitted", "missing", "correct", "accuracy", "categories", "tasks",
                 "answerability", "evidence_modality", "evidence_count", "judge"]
 
@@ -39,7 +48,13 @@ def _is_int(value: Any) -> bool:
 
 
 def _is_num(value: Any) -> bool:
-    return (isinstance(value, (int, float)) and not isinstance(value, bool))
+    """A finite JSON number (NaN / Infinity are not valid JSON and never come out of ``mmeb score``)."""
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and (isinstance(value, int) or math.isfinite(value)))
+
+
+def _reject_constant(name: str):
+    raise ValueError(f"non-standard JSON constant {name}")
 
 
 def load_metrics_bytes(data: bytes) -> dict:
@@ -47,19 +62,35 @@ def load_metrics_bytes(data: bytes) -> dict:
     if len(data) > MAX_METRICS_BYTES:
         raise ValidationError(f"metrics.json is {len(data):,} bytes; the limit is {MAX_METRICS_BYTES:,} bytes.")
     try:
-        obj = json.loads(data.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ValidationError(f"metrics.json is not valid UTF-8 JSON: {exc}") from exc
+        obj = json.loads(data.decode("utf-8"), parse_constant=_reject_constant)   # refuse NaN / Infinity
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:   # JSONDecodeError is a ValueError
+        raise ValidationError(f"metrics.json is not valid UTF-8 JSON: {type(exc).__name__}") from exc
     if not isinstance(obj, dict):
         raise ValidationError("metrics.json must be a JSON object.")
     return obj
 
 
 def _check_group(problems: list[str], name: str, group: Any, expected_n: dict[str, int] | None,
-                 expected_keys: list[str] | None, total_correct: int | None, check_sum: bool) -> None:
+                 expected_keys: list[str] | None, total_correct: int | None, check_sum: bool,
+                 total_n: int | None = None) -> None:
     if not isinstance(group, dict):
         problems.append(f"'{name}' must be an object.")
         return
+    if not group:
+        problems.append(f"'{name}' is empty.")
+        return
+    if expected_keys is None:   # scorer-defined buckets: bounded in number, name and size
+        if len(group) > MAX_EVIDENCE_ENTRIES:
+            problems.append(f"'{name}' has {len(group)} entries; at most {MAX_EVIDENCE_ENTRIES} are allowed.")
+            return
+        bad_keys = [k for k in group if not isinstance(k, str) or not EVIDENCE_KEY_RE.match(k)]
+        if bad_keys:
+            problems.append(f"'{name}' has {len(bad_keys)} entries with invalid names (letters, digits, space, _+./- "
+                            f"only, at most 32 characters).")
+            return
+        empty = [k for k, v in group.items() if isinstance(v, dict) and _is_int(v.get("n")) and v["n"] <= 0]
+        if empty:
+            problems.append(f"'{name}' has empty buckets (n must be > 0): {', '.join(empty)}.")
     keys = expected_keys or list(group)
     missing = [k for k in keys if k not in group]
     if missing:
@@ -68,6 +99,7 @@ def _check_group(problems: list[str], name: str, group: Any, expected_n: dict[st
     if extra:
         problems.append(f"'{name}' has unexpected entries: {', '.join(extra)}.")
     total = 0
+    n_total = 0
     for key in keys:
         entry = group.get(key)
         if not isinstance(entry, dict):
@@ -91,9 +123,13 @@ def _check_group(problems: list[str], name: str, group: Any, expected_n: dict[st
                 if abs(entry["accuracy"] - expected) > 0.011:
                     problems.append(f"'{name}.{key}.accuracy' is {entry['accuracy']}, expected {expected}.")
             total += entry["correct"]
+        if _is_int(entry.get("n")):
+            n_total += entry["n"]
     if check_sum and total_correct is not None and not missing:
         if total != total_correct:
-            problems.append(f"sum of '{name}' correct counts ({total}) != top-level correct ({total_correct}).")
+            problems.append(f"sum of '{name}' correct counts ({total}) != expected correct ({total_correct}).")
+    if total_n is not None and not missing and n_total != total_n:
+        problems.append(f"sum of '{name}' n ({n_total}) != {total_n}.")
 
 
 def validate_metrics(metrics: dict, allow_pre_judged: bool = False) -> dict:
@@ -129,14 +165,19 @@ def validate_metrics(metrics: dict, allow_pre_judged: bool = False) -> dict:
     if "tasks" in metrics:
         _check_group(problems, "tasks", metrics["tasks"], TASK_N, TASKS, correct, True)
     if "categories" in metrics:
-        _check_group(problems, "categories", metrics["categories"], None, CATEGORIES, correct, True)
+        _check_group(problems, "categories", metrics["categories"], CATEGORY_N, CATEGORIES, correct, True)
+    answerable_correct = None
     if "answerability" in metrics:
-        _check_group(problems, "answerability", metrics["answerability"], None, ["answerable", "unanswerable"],
-                     correct, True)
-    if "evidence_modality" in metrics:
-        _check_group(problems, "evidence_modality", metrics["evidence_modality"], None, None, None, False)
-    if "evidence_count" in metrics:
-        _check_group(problems, "evidence_count", metrics["evidence_count"], None, None, None, False)
+        _check_group(problems, "answerability", metrics["answerability"], ANSWERABILITY_N,
+                     list(ANSWERABILITY_N), correct, True)
+        try:
+            value = metrics["answerability"]["answerable"]["correct"]
+            answerable_correct = value if _is_int(value) else None
+        except (KeyError, TypeError):
+            answerable_correct = None
+    for name in EVIDENCE_GROUPS:
+        if name in metrics:   # groups over the 1,526 answerable questions; keys are the scorer's buckets
+            _check_group(problems, name, metrics[name], None, None, answerable_correct, True, total_n=N_ANSWERABLE)
 
     judge = metrics.get("judge")
     if "judge" in metrics and not isinstance(judge, dict):
@@ -158,6 +199,18 @@ def _acc(group: Any, key: str):
     return float(value) if _is_num(value) else None
 
 
+def _count(group: Any, key: str):
+    """``{"correct", "n"}`` of one bucket (exact integers; the display rounds from these, not from ``accuracy``)."""
+    try:
+        entry = group[key]
+        correct, n = entry["correct"], entry["n"]
+    except (KeyError, TypeError):
+        return None
+    if not (_is_int(correct) and _is_int(n)) or n <= 0:
+        return None
+    return {"correct": correct, "n": n}
+
+
 def summarize_metrics(metrics: dict) -> dict:
     """Headline numbers stored in a leaderboard row (accuracies in percent)."""
     retrieval = metrics.get("retrieval")
@@ -173,6 +226,11 @@ def summarize_metrics(metrics: dict) -> dict:
         "answerability": {k: _acc(metrics["answerability"], k) for k in ("answerable", "unanswerable")},
         "evidence_modality": {k: _acc(metrics["evidence_modality"], k) for k in metrics["evidence_modality"]},
         "evidence_count": {k: _acc(metrics["evidence_count"], k) for k in metrics["evidence_count"]},
+        "counts": {
+            "overall": {"correct": int(metrics["correct"]), "n": N_QUESTIONS},
+            "categories": {CATEGORY_SHORT[c]: _count(metrics["categories"], c) for c in CATEGORIES},
+            "tasks": {t: _count(metrics["tasks"], t) for t in TASKS},
+        },
         "retrieval_recall": recall,
         "judge_model": (metrics.get("judge") or {}).get("model") if isinstance(metrics.get("judge"), dict) else None,
         "pre_judged": bool((metrics.get("judge") or {}).get("pre_judged")) if isinstance(metrics.get("judge"), dict) else None,
@@ -196,7 +254,7 @@ def validate_predictions(path: str) -> dict:
                 continue
             try:
                 row = json.loads(raw.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError):
+            except (UnicodeDecodeError, ValueError, RecursionError):
                 raise ValidationError(f"predictions.jsonl line {number} is not valid JSON.")
             if not isinstance(row, dict) or not isinstance(row.get("id"), str) or not isinstance(row.get("answer"), str):
                 raise ValidationError(f"predictions.jsonl line {number} must be an object with string 'id' and 'answer'.")
