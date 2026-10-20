@@ -38,9 +38,13 @@ Jayun Ku<sup>1</sup> &nbsp;
 
 **1,613 questions** (1,526 answerable + 87 unanswerable) · **30 projects** · **7,140 records** (5,725 text + 1,415 visual) · **8 tasks** in 3 categories.
 
-## Status
+## News
 
-The paper is under review. **Code, dataset and evaluation toolkit will be released here soon.** In the meantime the [project page](https://mlvlab.github.io/MMEnterprise-Bench/) has the teaser video, the task taxonomy, the construction pipeline and the main results.
+- **2026-10** — Project page and teaser video are live.
+- **Coming soon** — full generation pipeline code (seed PDF → simulated workspace → validated questions).
+- **Coming soon** — dataset and evaluation toolkit (`mmeb`), with frozen retrieval rankings and the judge protocol.
+
+The paper is under review; see the [project page](https://mlvlab.github.io/MMEnterprise-Bench/) for the task taxonomy, the construction pipeline and the main results.
 
 ## Results
 
