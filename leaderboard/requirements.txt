@@ -1,4 +1,0 @@
-gradio==5.50.0
-gradio_client>=1.14.0
-huggingface_hub>=0.34
-pandas>=2.0

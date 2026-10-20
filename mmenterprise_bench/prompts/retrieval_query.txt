@@ -1,1 +1,0 @@
-Given a question about organizational records, retrieve records or document pages that help answer the question.
