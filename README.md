@@ -32,7 +32,7 @@ Jayun Ku<sup>1</sup> &nbsp;
 </a>
 
 <p>
-  <a href="https://mlvlab.github.io/MMEnterprise-Bench/#video"><strong>▶ Watch the teaser video (2:11)</strong></a>
+  <a href="https://mlvlab.github.io/MMEnterprise-Bench/#video"><strong>▶ Watch the teaser video (2:27)</strong></a>
   &nbsp;·&nbsp;
   <a href="https://mlvlab.github.io/MMEnterprise-Bench/static/videos/mmenterprise-bench-teaser.mp4">Direct MP4</a>
 </p>
