@@ -52,11 +52,11 @@ log = logging.getLogger("mmeb-leaderboard")
 STORAGE = get_storage()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
-MAIN_COLS = ["Rank", "Model", "Organization", "Setting", "Overall", "Evidence Reasoning", "Conflict Resolution",
-             "Unanswerability", "Judge", "Date", "Source", "Link"]
+MAIN_COLS = ["Rank", "Model", "Setting", "Overall", "Evidence Reasoning", "Conflict Resolution",
+             "Unanswerability", "Judge", "Date"]
 # relative weights; ``_widths`` rescales the visible columns so they always sum to 100%
-MAIN_WEIGHTS = {"Rank": 4.5, "Model": 13, "Organization": 10.5, "Setting": 8, "Overall": 7, "Evidence Reasoning": 9,
-                "Conflict Resolution": 9, "Unanswerability": 12, "Judge": 10, "Date": 9.5, "Source": 7.5, "Link": 4.5}
+MAIN_WEIGHTS = {"Rank": 5, "Model": 18, "Setting": 10, "Overall": 9, "Evidence Reasoning": 12,
+                "Conflict Resolution": 12, "Unanswerability": 13, "Judge": 11, "Date": 10}
 TASK_COLS = ["Rank", "Model", "Setting"] + TASKS
 TASK_WEIGHTS = {"Rank": 5.5, "Model": 12, "Setting": 9, "Unanswerability": 11}
 PENDING_WIDTHS = ["230px", "150px", "130px", "110px", "100px", "75px", "60px", "60px", "60px", "80px", "95px", "120px",
@@ -184,11 +184,11 @@ def leaderboard_tables(setting: str):
         cat_counts = counts.get("categories") or {}
         task_counts = counts.get("tasks") or {}
         label = short_setting(r.get("setting", ""))   # "2B · k=10" in the table; the full string stays in storage
-        main.append([rank, r.get("model", ""), r.get("organization", ""), label,
+        main.append([rank, r.get("model", ""), label,
                      _fmt_count(counts.get("overall"), r.get("overall")),
                      _fmt_count(cat_counts.get("ER"), cats.get("ER")), _fmt_count(cat_counts.get("CR"), cats.get("CR")),
                      _fmt_count(cat_counts.get("UNS"), cats.get("UNS")),
-                     r.get("judge", ""), r.get("date", ""), r.get("source", ""), _link_md(r.get("link"))])
+                     r.get("judge", ""), r.get("date", "")])
         per_task = r.get("tasks") or {}
         tasks.append([rank, r.get("model", ""), label] + [_fmt_count(task_counts.get(t), per_task.get(t)) for t in TASKS])
     main_df = pd.DataFrame(main, columns=MAIN_COLS)
@@ -196,7 +196,7 @@ def leaderboard_tables(setting: str):
     if setting != ALL_SETTINGS:
         main_df = main_df.drop(columns=["Setting"])
         task_df = task_df.drop(columns=["Setting"])
-    main_types = ["number"] + ["str"] * (len(main_df.columns) - 2) + ["markdown"]
+    main_types = ["number"] + ["str"] * (len(main_df.columns) - 1)
     main_widths = _widths(main_df.columns, MAIN_WEIGHTS)
     task_widths = _widths(task_df.columns, TASK_WEIGHTS)
     return (gr.update(value=main_df, headers=list(main_df.columns), datatype=main_types, column_widths=main_widths),

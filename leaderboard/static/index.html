@@ -372,7 +372,6 @@
               <tr>
                 <th class="left">Rank</th>
                 <th class="left">Model</th>
-                <th class="left">Organization</th>
                 <th class="left col-setting">Setting</th>
                 <th>Overall</th>
                 <th class="cat">Evidence Reasoning<span>ER · 1,102</span></th>
@@ -380,12 +379,10 @@
                 <th class="cat">Unanswerability<span>UNS · 87</span></th>
                 <th>Judge</th>
                 <th>Date</th>
-                <th>Source</th>
-                <th>Link</th>
               </tr>
             </thead>
             <tbody id="lb-body">
-              <tr class="empty"><td colspan="12">Loading results</td></tr>
+              <tr class="empty"><td colspan="9">Loading results</td></tr>
             </tbody>
           </table>
         </div>
@@ -707,7 +704,7 @@ mmeb download</pre><button class="copy-btn" type="button" data-copy="cmd-1">Copy
       document.getElementById("lb-table").classList.toggle("all", showSetting);
       var headSetting = document.querySelector("th.col-setting");
       headSetting.style.display = showSetting ? "" : "none";
-      var cols = showSetting ? 12 : 11;
+      var cols = showSetting ? 9 : 8;
       var list = visibleRows();
       body.textContent = "";
       setStatus(dataInfo.kind, describeData());
@@ -734,7 +731,6 @@ mmeb download</pre><button class="copy-btn" type="button" data-copy="cmd-1">Copy
         chev.appendChild(path); rankTd.appendChild(chev); rankTd.appendChild(document.createTextNode(rank));
         tr.appendChild(rankTd);
         tr.appendChild(el("td", "model left", str(r.model) || "–"));
-        var org = el("td", "org left", str(r.organization) || "–"); org.title = str(r.organization); tr.appendChild(org);
         if (showSetting){ var st = el("td", "setting left", shortSetting(r.setting) || "–"); st.title = str(r.setting); tr.appendChild(st); }
         tr.appendChild(el("td", "num overall", fmt(counts.overall, r.overall)));
         tr.appendChild(el("td", "num", fmt(cc.ER, cats.ER)));
@@ -742,8 +738,6 @@ mmeb download</pre><button class="copy-btn" type="button" data-copy="cmd-1">Copy
         tr.appendChild(el("td", "num", fmt(cc.UNS, cats.UNS)));
         var jd = el("td", "judge", str(r.judge) || "–"); jd.title = str(r.judge); tr.appendChild(jd);
         tr.appendChild(el("td", "date", str(r.date) || "–"));
-        tr.appendChild(sourceCell(r.source));
-        tr.appendChild(linkCell(r.link));
         body.appendChild(tr);
         var det = detailsRow(r, cols);
         if (!open) det.hidden = true;
