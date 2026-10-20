@@ -5,8 +5,7 @@
 <p>
   <img src="https://img.shields.io/badge/arXiv-coming%20soon-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv (coming soon)">
   <a href="https://mlvlab.github.io/MMEnterprise-Bench/"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20Project-Page-2b4f9e?style=for-the-badge" alt="Project Page"></a>
-  <a href="https://huggingface.co/datasets/MMEnterprise-Bench/MMEnterprise-Bench"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-ffce1c?style=for-the-badge" alt="Hugging Face Dataset"></a>
-  <a href="https://huggingface.co/datasets/MMEnterprise-Bench/baselines"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Baselines-ffce1c?style=for-the-badge" alt="Hugging Face Baselines"></a>
+  <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset%20coming%20soon-ffce1c?style=for-the-badge" alt="Hugging Face Dataset (coming soon)">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-3da639?style=for-the-badge" alt="License"></a>
 </p>
 
@@ -20,10 +19,6 @@ Jayun Ku<sup>1</sup> &nbsp;
 
 <sup>1</sup> KAIST &nbsp;&nbsp; <sup>2</sup> Korea University &nbsp;&nbsp;
 <sub>(\* equal contribution &nbsp; &dagger; corresponding author)</sub>
-
-<br>
-
-<img src="docs/static/figures/fig2_pipeline.png" width="95%" alt="MMEnterprise-Bench construction pipeline">
 
 <br>
 
@@ -112,7 +107,6 @@ More options: [EVALUATION.md](EVALUATION.md).
 mmeb run-baseline --models luna --retrievers 2b --k 10     # resumable; OPENAI_API_KEY
 ```
 
-All paper outputs (10 models × 2 retrievers × k ∈ {10, 50, 100}): [🤗 Baselines](https://huggingface.co/datasets/MMEnterprise-Bench/baselines).
 
 <details>
 <summary>All readers, local models with vLLM, full grid</summary>

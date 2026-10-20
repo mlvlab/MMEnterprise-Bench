@@ -475,8 +475,8 @@
 
       <div class="buttons">
         <a class="btn ghost" id="paper-btn" href="#" title="arXiv preprint, link coming soon" aria-disabled="true" onclick="return false;"><i class="fas fa-file-lines"></i> Paper <span class="soon">arXiv soon</span></a>
-        <a class="btn" href="https://github.com/mlvlab/MMEnterprise-Bench" target="_blank" rel="noopener"><i class="fab fa-github"></i> Code</a>
-        <a class="btn" href="https://huggingface.co/datasets/MMEnterprise-Bench/MMEnterprise-Bench" target="_blank" rel="noopener"><span class="emoji">&#129303;</span> Dataset</a>
+        <a class="btn ghost" id="code-btn" href="#" title="Code release coming soon" aria-disabled="true" onclick="return false;"><i class="fab fa-github"></i> Code <span class="soon">coming soon</span></a>
+        <a class="btn ghost" id="data-btn" href="#" title="Dataset release coming soon" aria-disabled="true" onclick="return false;"><span class="emoji">&#129303;</span> Dataset <span class="soon">coming soon</span></a>
       </div>
     </div>
   </header>
@@ -870,6 +870,7 @@
     <div class="wrap">
       <span class="eyebrow">Get started</span>
       <h2 class="section-title">Evaluate your own agent in four commands</h2>
+      <p class="section-sub" style="color:var(--brand-d);font-weight:600">Code and dataset release coming soon. The commands below will work once they are live.</p>
       <p class="section-sub">The data lives on Hugging Face and the evaluation toolkit (<code class="inl">mmeb</code>) on GitHub. Your agent only has to read one JSONL file and write another; the scorer applies the paper&rsquo;s judge protocol and reports accuracy per category, task, and evidence group.</p>
 
       <div class="codegrid">
@@ -951,8 +952,8 @@ records = build_context(bench, row, retriever=<span class="s">"2b"</span>, k=<sp
       <a class="lab-logo" href="https://mlv.kaist.ac.kr/" target="_blank" rel="noopener" title="MLV Lab, KAIST"><img src="static/logos/mlv_logo.png" alt="MLV Lab, KAIST"></a>
       <p class="lab-cap">Machine Learning &amp; Vision Lab, KAIST</p>
       <div class="foot-links">
-        <a href="https://github.com/mlvlab/MMEnterprise-Bench" target="_blank" rel="noopener"><i class="fab fa-github"></i> Code</a>
-        <a href="https://huggingface.co/datasets/MMEnterprise-Bench/MMEnterprise-Bench" target="_blank" rel="noopener"><span class="emoji">&#129303;</span> Dataset</a>
+        <span><i class="fab fa-github"></i> Code (coming soon)</span>
+        <span><span class="emoji">&#129303;</span> Dataset (coming soon)</span>
         <a href="https://mlv.kaist.ac.kr/" target="_blank" rel="noopener"><i class="fas fa-flask"></i> MLV Lab</a>
       </div>
       <p class="foot-note">
