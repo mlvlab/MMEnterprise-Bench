@@ -3,7 +3,7 @@
 # MMEnterprise-Bench: Evaluating Enterprise Agents over Evolving Multimodal Records
 
 <p>
-  <img src="https://img.shields.io/badge/arXiv-coming%20soon-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv (coming soon)">
+  <a href="https://arxiv.org/abs/2610.27911"><img src="https://img.shields.io/badge/arXiv-2610.27911-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv"></a>
   <a href="https://mlvlab.github.io/MMEnterprise-Bench/"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20Project-Page-2b4f9e?style=for-the-badge" alt="Project Page"></a>
   <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset%20coming%20soon-ffce1c?style=for-the-badge" alt="Hugging Face Dataset (coming soon)">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-3da639?style=for-the-badge" alt="License"></a>
@@ -40,7 +40,7 @@ Jayun Ku<sup>1</sup> &nbsp;
 
 ## News
 
-- **2026-10** — Project page and teaser video are live.
+- **2026-10** — Paper preprint on arXiv: [2610.27911](https://arxiv.org/abs/2610.27911). Project page and teaser video are live.
 - **Coming soon** — full generation pipeline code (seed PDF → simulated workspace → validated questions).
 - **Coming soon** — dataset and evaluation toolkit (`mmeb`), with frozen retrieval rankings and the judge protocol.
 
@@ -89,4 +89,4 @@ Evidence Recall@k of the released retrievers (1,526 answerable questions): 2B 41
 
 ## License
 
-Code will be released under the MIT License; benchmark annotations and simulated records under CC BY 4.0 (embedded figures and page images keep the rights of their source documents). The paper is an arXiv preprint; a BibTeX entry will be added once it is listed.
+Code will be released under the MIT License; benchmark annotations and simulated records under CC BY 4.0 (embedded figures and page images keep the rights of their source documents). Paper: [arXiv:2610.27911](https://arxiv.org/abs/2610.27911).
