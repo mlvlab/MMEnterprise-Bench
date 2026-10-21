@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MMEnterprise-Bench</title>
+  <meta name="description" content="MMEnterprise-Bench: a benchmark of 1,613 questions over evolving multimodal workplace records from 30 simulated collaboration projects, evaluating enterprise agents on evidence reasoning, cross-source and temporal conflict resolution, and unanswerability.">
+
+  <meta property="og:title" content="MMEnterprise-Bench: Evaluating Enterprise Agents over Evolving Multimodal Records">
+  <meta property="og:description" content="1,613 questions grounded in evolving multimodal records from 30 simulated collaboration projects. Evidence Reasoning, Conflict Resolution, Unanswerability. 10 multimodal LLMs evaluated.">
+  <meta property="og:image" content="https://mlvlab.github.io/MMEnterprise-Bench/static/figures/fig2_pipeline.png">
+  <meta property="og:url" content="https://mlvlab.github.io/MMEnterprise-Bench/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://mlvlab.github.io/MMEnterprise-Bench/static/figures/fig2_pipeline.png">
+  <meta name="theme-color" content="#070b18">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232b4f9e'/%3E%3Cstop offset='.6' stop-color='%236d28d9'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='24' height='24' rx='6.5' fill='url(%23g)'/%3E%3Cpath d='M6 17V7h2.6l2.4 5 2.4-5H16v10h-2.2v-6.2L11.6 15h-1.2L8.2 10.8V17z' fill='white'/%3E%3C/svg%3E">
+  <script>(function(){try{var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}document.documentElement.classList.add('js');})();</script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    /* =====================================================================
+       Design tokens
+       ===================================================================== */
+    :root{
+      --brand:#2b4f9e;
+      --brand-d:#1d3a78;
+      --brand-dd:#142a59;
+      --violet:#6d28d9;
+      --cyan:#22d3ee;
+      --cyan-d:#0891b2;
+      --brand-l:#eef3fc;
+      --brand-l2:#dbe6fa;
+      --ink:#0f1424;
+      --muted:#4b5569;
+      --muted-l:#6b7486;
+      --line:#e3e8f2;
+      --bg:#ffffff;
+      --soft:#f5f7fc;
+      --card:#ffffff;
+      --card-2:#ffffff;
+      --er:#2b4f9e;  --er-l:#eef3fc;  --er-g:rgba(43,79,158,.18);
+      --cr:#c2410c;  --cr-l:#fff1e8;  --cr-g:rgba(234,88,12,.18);
+      --uns:#6d28d9; --uns-l:#f3eefe; --uns-g:rgba(109,40,217,.18);
+      --rec:#0f766e; --rec-l:#e6f6f3;
+      --grad:linear-gradient(135deg,#2b4f9e 0%,#6d28d9 55%,#22d3ee 100%);
+      --grad-soft:linear-gradient(135deg,rgba(43,79,158,.14),rgba(109,40,217,.14) 55%,rgba(34,211,238,.14));
+      --grad-line:linear-gradient(90deg,transparent 0%,rgba(43,79,158,.55) 20%,rgba(109,40,217,.75) 50%,rgba(34,211,238,.6) 80%,transparent 100%);
+      --radius:18px;
+      --shadow:0 1px 2px rgba(20,30,60,.04),0 10px 36px rgba(20,30,60,.07);
+      --shadow-h:0 6px 18px rgba(20,30,60,.09),0 24px 60px rgba(20,30,60,.14);
+      --maxw:1320px;
+      --textw:1000px;
+      --navh:64px;
+      /* always-dark surfaces (hero, dark bands, footer) */
+      --d-bg:#070b18;
+      --d-bg2:#0a1024;
+      --d-card:rgba(255,255,255,.045);
+      --d-line:rgba(255,255,255,.1);
+      --d-ink:#eef2fb;
+      --d-muted:#a9b3c9;
+    }
+    html.dark{
+      --brand:#7ea2ff;--brand-d:#9fbaff;--brand-dd:#c6d6ff;
+      --brand-l:#131b31;--brand-l2:#1f2a48;
+      --ink:#e9edf8;--muted:#a3adc2;--muted-l:#7f8aa3;
+      --line:#1c2439;--bg:#090d1c;--soft:#0c1224;--card:#101729;--card-2:#121a2f;
+      --er:#8fb0ff;--er-l:#141d35;--er-g:rgba(126,162,255,.2);
+      --cr:#fb923c;--cr-l:#2a1a10;--cr-g:rgba(251,146,60,.2);
+      --uns:#c4b5fd;--uns-l:#1e1735;--uns-g:rgba(196,181,253,.2);
+      --rec:#5eead4;--rec-l:#0f2a27;
+      --grad:linear-gradient(135deg,#6f94f5 0%,#a78bfa 55%,#67e8f9 100%);
+      --grad-soft:linear-gradient(135deg,rgba(111,148,245,.16),rgba(167,139,250,.16) 55%,rgba(103,232,249,.16));
+      --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 36px rgba(0,0,0,.4);
+      --shadow-h:0 6px 18px rgba(0,0,0,.45),0 24px 60px rgba(0,0,0,.55);
+    }
+
+    /* =====================================================================
+       Base
+       ===================================================================== */
+    *{box-sizing:border-box;}
+    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+    body{
+      margin:0;
+      font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+      color:var(--ink);
+      background:var(--bg);
+      line-height:1.68;
+      font-size:17px;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+      overflow-x:hidden;
+    }
+    a{color:var(--brand);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    a:focus-visible,button:focus-visible,.gitem:focus-visible{outline:3px solid var(--cyan);outline-offset:3px;border-radius:10px;text-decoration:none;}
+    img,video{max-width:100%;}
+    .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px;width:100%;}
+    .narrow{max-width:var(--textw);margin-left:auto;margin-right:auto;}
+    h1,h2,h3,h4{font-family:'Plus Jakarta Sans','Inter',sans-serif;letter-spacing:-.025em;}
+    figure{margin:0;}
+    .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+    /* reveal on scroll (content stays visible without JS) */
+    html.js .reveal{opacity:0;transform:translateY(26px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1);transition-delay:var(--d,0s);}
+    html.js .reveal.in{opacity:1;transform:none;}
+    html.js .reveal-scale{opacity:0;transform:scale(.96) translateY(18px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1);transition-delay:var(--d,0s);}
+    html.js .reveal-scale.in{opacity:1;transform:none;}
+
+    /* =====================================================================
+       Top nav (glass; dark over the hero, theme-coloured once scrolled)
+       ===================================================================== */
+    nav.topbar{
+      position:fixed;top:0;left:0;right:0;z-index:60;
+      -webkit-backdrop-filter:saturate(160%) blur(16px);backdrop-filter:saturate(160%) blur(16px);
+      background:rgba(7,11,24,.55);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      color:#fff;
+      transition:background .35s ease,border-color .35s ease,color .35s ease;
+    }
+    html:not(.dark) nav.topbar.lit{background:rgba(255,255,255,.78);border-bottom-color:var(--line);color:var(--ink);}
+    html.dark nav.topbar.lit{background:rgba(9,13,28,.75);border-bottom-color:var(--line);}
+    .topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:var(--navh);gap:16px;}
+    .topbar .nav-left{display:flex;align-items:center;gap:14px;min-width:0;}
+    .topbar .nav-logo{line-height:0;display:block;flex-shrink:0;}
+    .topbar .nav-logo img{height:30px;width:auto;max-width:min(200px,40vw);display:block;object-fit:contain;transition:opacity .15s,filter .35s;filter:invert(1) hue-rotate(180deg) brightness(1.15);}
+    html:not(.dark) nav.topbar.lit .nav-logo img{filter:none;}
+    .topbar .nav-logo:hover img{opacity:.8;}
+    .topbar .nav-sep{width:1px;height:22px;background:currentColor;opacity:.2;flex-shrink:0;}
+    .topbar .brand-mini{display:flex;align-items:center;gap:10px;font-weight:700;font-family:'Plus Jakarta Sans';letter-spacing:-.01em;color:inherit;white-space:nowrap;font-size:1.02rem;}
+    .topbar .brand-mini b{background:linear-gradient(90deg,#7ea2ff,#c4b5fd,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent;}
+    html:not(.dark) nav.topbar.lit .brand-mini b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+    .topbar .brand-mini:hover{text-decoration:none;}
+    .nav-right{display:flex;align-items:center;gap:18px;}
+    .navlinks{display:flex;gap:4px;font-size:.9rem;font-weight:500;}
+    .navlinks a{color:inherit;opacity:.78;padding:6px 10px;border-radius:999px;transition:opacity .15s,background .15s;}
+    .navlinks a:hover{opacity:1;background:rgba(127,140,180,.16);text-decoration:none;}
+    .theme-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;background:rgba(127,140,180,.14);border:1px solid rgba(127,140,180,.25);color:inherit;cursor:pointer;transition:transform .2s,background .2s;flex-shrink:0;}
+    .theme-btn:hover{transform:rotate(-12deg) scale(1.06);background:rgba(127,140,180,.26);}
+    .theme-btn .ic-sun{display:none;}
+    html.dark .theme-btn .ic-moon{display:none;}
+    html.dark .theme-btn .ic-sun{display:inline;}
+    @media(max-width:1000px){.navlinks{display:none;}}
+    @media(max-width:480px){.topbar .brand-mini{display:none;}.topbar .nav-sep{display:none;}}
+
+    /* =====================================================================
+       Hero
+       ===================================================================== */
+    header.hero{
+      position:relative;overflow:hidden;isolation:isolate;
+      background:var(--d-bg);color:var(--d-ink);
+      padding:calc(var(--navh) + 72px) 0 56px;
+      text-align:center;
+    }
+    .aurora{position:absolute;inset:0;z-index:-3;overflow:hidden;pointer-events:none;}
+    .aurora .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.75;will-change:transform;mix-blend-mode:screen;}
+    .aurora .b1{width:62vw;height:62vw;max-width:900px;max-height:900px;left:-14vw;top:-22vw;background:radial-gradient(circle at 40% 40%,#2b4f9e 0%,rgba(43,79,158,.55) 35%,rgba(43,79,158,0) 70%);}
+    .aurora .b2{width:56vw;height:56vw;max-width:820px;max-height:820px;right:-16vw;top:-8vw;background:radial-gradient(circle at 50% 50%,#6d28d9 0%,rgba(109,40,217,.5) 35%,rgba(109,40,217,0) 70%);}
+    .aurora .b3{width:50vw;height:50vw;max-width:720px;max-height:720px;left:30vw;bottom:-28vw;background:radial-gradient(circle at 50% 50%,#22d3ee 0%,rgba(34,211,238,.4) 35%,rgba(34,211,238,0) 70%);opacity:.55;}
+    @keyframes blob1{0%{transform:translate(0,0) scale(1);}50%{transform:translate(9vw,6vw) scale(1.12);}100%{transform:translate(-4vw,12vw) scale(.96);}}
+    @keyframes blob2{0%{transform:translate(0,0) scale(1);}50%{transform:translate(-10vw,10vw) scale(1.08);}100%{transform:translate(4vw,-6vw) scale(1.16);}}
+    @keyframes blob3{0%{transform:translate(0,0) scale(1);}50%{transform:translate(-12vw,-8vw) scale(1.1);}100%{transform:translate(10vw,-4vw) scale(.92);}}
+    .grain{
+      position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.07;mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .hero .wrap{position:relative;}
+    .kicker{
+      display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+      font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#cdd6ef;
+      padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.05);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+      margin-bottom:28px;
+    }
+    .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 0 rgba(34,211,238,.6);animation:ping 2.2s ease-out infinite;}
+    @keyframes ping{0%{box-shadow:0 0 0 0 rgba(34,211,238,.6);}100%{box-shadow:0 0 0 12px rgba(34,211,238,0);}}
+    .kicker .sep{opacity:.35;}
+
+    h1.title{
+      font-size:clamp(1.9rem,5.6vw,4.1rem);line-height:1.05;font-weight:800;letter-spacing:-.035em;
+      margin:0 auto 22px;max-width:1120px;overflow-wrap:break-word;text-wrap:balance;color:#fff;
+    }
+    h1 .t-line{display:inline-block;}
+    h1 .brand{white-space:nowrap;background:linear-gradient(95deg,#9db7ff 0%,#c9b8ff 45%,#7ff0ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 28px rgba(109,40,217,.35));}
+    h1 .colon{color:rgba(255,255,255,.55);}
+    h1 .rest{color:#f4f6ff;}
+    html.js .t-line{opacity:0;transform:translateY(34px);clip-path:inset(0 0 110% 0);animation:lineIn 1s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:var(--d,0s);}
+    @keyframes lineIn{to{opacity:1;transform:none;clip-path:inset(-20% 0 -20% 0);}}
+    .fade{opacity:1;}
+    html.js .fade{opacity:0;transform:translateY(14px);animation:fadeIn .9s ease forwards;animation-delay:var(--d,0s);}
+    @keyframes fadeIn{to{opacity:1;transform:none;}}
+
+    .authors{font-size:1.08rem;margin:10px auto 6px;line-height:2.1;max-width:1000px;color:#dfe5f6;}
+    .authors .au{white-space:nowrap;margin:0 6px;color:#eef2fb;font-weight:600;position:relative;transition:color .15s;}
+    .authors a.au:hover{color:#9fe7ff;text-decoration:none;}
+    .authors a.au::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:linear-gradient(90deg,#7ea2ff,#67e8f9);transform:scaleX(0);transform-origin:left;transition:transform .25s;}
+    .authors a.au:hover::after{transform:scaleX(1);}
+    .sup{color:#8fd7ff;font-weight:700;font-size:.78em;}
+    .affil{color:#b8c2dd;font-size:.98rem;margin:10px auto 2px;display:flex;gap:22px;justify-content:center;flex-wrap:wrap;}
+    .affil span{display:inline-flex;align-items:center;gap:6px;}
+    .notes{color:#8e9ab8;font-size:.86rem;margin-top:4px;}
+
+    /* ---- hero buttons ---- */
+    .buttons{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:36px 0 10px;}
+    .btn{
+      position:relative;display:inline-flex;align-items:center;gap:10px;overflow:hidden;
+      color:#fff;font-family:'Inter',sans-serif;
+      padding:13px 26px;border-radius:999px;
+      font-size:.98rem;font-weight:600;border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+      transition:transform .18s ease,box-shadow .25s ease,background .25s ease,border-color .25s;
+      isolation:isolate;
+    }
+    .btn::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.28) 50%,transparent 80%);transform:translateX(-120%);transition:transform .7s ease;}
+    .btn:hover::before{transform:translateX(120%);}
+    .btn:hover{text-decoration:none;transform:translateY(-3px);box-shadow:0 14px 40px rgba(34,211,238,.18),0 4px 14px rgba(0,0,0,.35);background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);}
+    .btn i{font-size:1.06rem;}
+    .btn.primary{background:linear-gradient(135deg,#3b63c4 0%,#6d28d9 60%,#22b8d8 130%);border-color:rgba(255,255,255,.22);box-shadow:0 10px 30px rgba(109,40,217,.38),0 0 0 1px rgba(255,255,255,.04) inset;}
+    .btn.primary:hover{box-shadow:0 18px 46px rgba(109,40,217,.55),0 0 24px rgba(34,211,238,.25);}
+    .btn.ghost{cursor:default;color:#c3cce6;background:rgba(255,255,255,.04);border-style:dashed;}
+    .btn.ghost:hover{transform:none;box-shadow:none;background:rgba(255,255,255,.06);}
+    .btn.ghost::before{display:none;}
+    .btn .soon{font-size:.64rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(34,211,238,.14);color:#8fe7ff;padding:3px 9px;border-radius:999px;margin-left:2px;border:1px solid rgba(34,211,238,.3);}
+
+    /* ---- video glass card ---- */
+    .vcard{
+      position:relative;max-width:1040px;margin:56px auto 0;
+      padding:12px;border-radius:26px;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+      -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+      box-shadow:0 30px 80px rgba(0,0,0,.5);
+    }
+    .vcard::before{
+      content:"";position:absolute;inset:-2px;border-radius:28px;z-index:-1;
+      background:conic-gradient(from 180deg at 50% 50%,#2b4f9e,#6d28d9,#22d3ee,#6d28d9,#2b4f9e);
+      filter:blur(22px);opacity:.45;
+    }
+    @keyframes spin{to{transform:rotate(1turn);}}
+    .vframe{position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:16/9;}
+    .video-player{width:100%;height:100%;display:block;background:#000;object-fit:cover;}
+    .play-ov{
+      display:none;position:absolute;inset:0;align-items:flex-end;justify-content:flex-start;
+      padding:0 0 clamp(44px,8%,78px) clamp(16px,3.5%,34px);
+      background:linear-gradient(180deg,rgba(7,11,24,0) 55%,rgba(7,11,24,.42) 100%);
+      border:0;cursor:pointer;color:#fff;font:inherit;
+      transition:opacity .35s;
+    }
+    html.js .play-ov{display:flex;}
+    .play-ov.hide{opacity:0;pointer-events:none;}
+    .play-ov .ring{
+      display:inline-flex;align-items:center;gap:14px;
+      padding:14px 28px 14px 16px;border-radius:999px;
+      background:rgba(7,11,24,.6);border:1px solid rgba(255,255,255,.25);
+      -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+      font-weight:700;font-size:1.05rem;letter-spacing:-.01em;
+      box-shadow:0 10px 40px rgba(0,0,0,.45);transition:transform .2s,background .2s;
+    }
+    .play-ov:hover .ring{transform:scale(1.05);background:rgba(7,11,24,.75);}
+    .play-ov .ring .pb{width:44px;height:44px;border-radius:50%;background:var(--grad);display:inline-flex;align-items:center;justify-content:center;font-size:1rem;position:relative;}
+    .play-ov .ring .pb::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(34,211,238,.6);animation:ping2 1.8s ease-out infinite;}
+    @keyframes ping2{0%{transform:scale(.9);opacity:1;}100%{transform:scale(1.5);opacity:0;}}
+    .play-ov .ring .pb i{margin-left:3px;}
+
+    .scroll-cue{margin:42px auto 0;display:flex;flex-direction:column;align-items:center;gap:8px;color:#8e9ab8;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;}
+    .scroll-cue .mouse{width:22px;height:36px;border:2px solid rgba(255,255,255,.3);border-radius:12px;position:relative;}
+    .scroll-cue .mouse::after{content:"";position:absolute;left:50%;top:7px;width:4px;height:8px;margin-left:-2px;border-radius:2px;background:#8fe7ff;animation:wheel 1.8s ease-in-out infinite;}
+    @keyframes wheel{0%{transform:translateY(0);opacity:1;}70%{transform:translateY(12px);opacity:0;}100%{transform:translateY(0);opacity:0;}}
+
+    /* =====================================================================
+       Signature "conflict" illustration (pure CSS/JS)
+       ===================================================================== */
+    .conflict-band{background:linear-gradient(180deg,var(--d-bg) 0%,var(--d-bg2) 100%);color:var(--d-ink);padding:10px 0 76px;position:relative;}
+    .stage{
+      position:relative;max-width:1120px;margin:0 auto;
+      border-radius:28px;border:1px solid rgba(255,255,255,.1);
+      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+      padding:34px 34px 30px;overflow:hidden;
+      box-shadow:0 30px 80px rgba(0,0,0,.4);
+    }
+    .stage::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 240px at 20% 0%,rgba(43,79,158,.35),transparent 70%),radial-gradient(500px 240px at 85% 100%,rgba(34,211,238,.18),transparent 70%);pointer-events:none;}
+    .stage-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px;position:relative;}
+    .stage-title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.25rem,2.6vw,1.7rem);letter-spacing:-.03em;margin:0;color:#fff;}
+    .stage-title span{background:linear-gradient(90deg,#9db7ff,#7ff0ff);-webkit-background-clip:text;background-clip:text;color:transparent;}
+    .stage-sub{color:#aab4cf;font-size:.95rem;margin:4px 0 0;}
+    .cs-tag{display:inline-flex;align-items:center;gap:8px;font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px;border:1px solid;}
+    .cs-tag-cr{color:#ffb38a;border-color:rgba(255,179,138,.35);background:rgba(234,88,12,.12);}
+    .cs-tag-t{color:#c8b8ff;border-color:rgba(200,184,255,.35);background:rgba(109,40,217,.16);}
+
+    .cs-grid{display:grid;grid-template-columns:minmax(200px,1fr) minmax(120px,1.2fr) minmax(220px,1fr);align-items:center;gap:0 18px;position:relative;}
+    .cs-sources{display:flex;flex-direction:column;gap:14px;}
+    .chip{
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding:12px 16px;border-radius:16px;
+      background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+      -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+      box-shadow:0 12px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);
+      animation:float 6s ease-in-out infinite;
+    }
+    .chip:nth-child(2){animation-delay:-2s;} .chip:nth-child(3){animation-delay:-4s;}
+    @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+    .chip .src{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#aab4cf;}
+    .chip .src i{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;}
+    .chip-1 .src i{background:#1f2937;} .chip-2 .src i{background:#b45309;} .chip-3 .src i{background:#b91c1c;}
+    .chip .val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:1.25rem;letter-spacing:-.02em;}
+    .chip-1 .val{color:#6ee7b7;} .chip-2 .val{color:#fcd34d;} .chip-3 .val{color:#fca5a5;}
+    .cs-spacer{min-height:190px;}
+    .cs-lines{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;pointer-events:none;}
+    .cs-lines path{fill:none;stroke:url(#csg);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:6 10;animation:dash 1.6s linear infinite;opacity:.9;}
+    .cs-lines path:nth-child(2){animation-delay:-.5s;} .cs-lines path:nth-child(3){animation-delay:-1s;}
+    .cs-lines path.glowline{stroke-dasharray:none;stroke-width:6;opacity:.14;filter:blur(3px);animation:none;}
+    .cs-lines circle{fill:#fff;opacity:.9;}
+    .cs-lines circle.pk{fill:#7ff0ff;filter:drop-shadow(0 0 6px rgba(34,211,238,.9));}
+    @keyframes dash{to{stroke-dashoffset:-32;}}
+    .cs-agent{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;}
+    .bubble{
+      position:relative;background:#fff;color:#0f1424;font-family:'JetBrains Mono',monospace;font-size:.92rem;font-weight:500;
+      padding:12px 16px;border-radius:14px;max-width:280px;line-height:1.45;
+      box-shadow:0 12px 30px rgba(0,0,0,.35);
+    }
+    .bubble::after{content:"";position:absolute;left:50%;bottom:-8px;width:16px;height:16px;background:#fff;transform:translateX(-50%) rotate(45deg);border-radius:3px;}
+    .agent-node{
+      width:84px;height:84px;border-radius:26px;position:relative;
+      background:linear-gradient(135deg,#3b63c4,#6d28d9);display:flex;align-items:center;justify-content:center;
+      font-size:2rem;color:#fff;box-shadow:0 0 0 6px rgba(109,40,217,.18),0 20px 50px rgba(109,40,217,.45);
+      animation:glow 3s ease-in-out infinite;
+    }
+    @keyframes glow{0%,100%{box-shadow:0 0 0 6px rgba(109,40,217,.18),0 20px 50px rgba(109,40,217,.45);}50%{box-shadow:0 0 0 12px rgba(34,211,238,.14),0 20px 60px rgba(34,211,238,.45);}}
+    .agent-node .q{position:absolute;top:-12px;right:-12px;width:32px;height:32px;border-radius:50%;background:#fcd34d;color:#1f2937;font-weight:800;font-family:'Plus Jakarta Sans';display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:0 6px 16px rgba(0,0,0,.4);animation:wiggle 2.4s ease-in-out infinite;}
+    @keyframes wiggle{0%,100%{transform:rotate(-8deg);}50%{transform:rotate(10deg) scale(1.08);}}
+    .agent-label{font-size:.82rem;color:#aab4cf;font-weight:600;letter-spacing:.02em;}
+
+    .cs-timeline{margin-top:34px;padding-top:26px;border-top:1px dashed rgba(255,255,255,.14);position:relative;}
+    .tl-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+    .tl-q{font-family:'JetBrains Mono',monospace;font-size:.88rem;color:#dfe5f6;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);padding:8px 12px;border-radius:10px;}
+    .tl{position:relative;padding-top:22px;}
+    .tl-axis{position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:visible;}
+    .tl-fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#2b4f9e,#6d28d9,#22d3ee);width:0;animation:tlfill 7s linear infinite;}
+    .tl-head-dot{position:absolute;top:50%;left:0;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(34,211,238,.35),0 0 20px rgba(34,211,238,.9);animation:tlhead 7s linear infinite;}
+    @keyframes tlfill{0%{width:0;}92%{width:100%;}100%{width:100%;}}
+    @keyframes tlhead{0%{left:0;}92%{left:100%;}100%{left:100%;}}
+    .tl-ends{display:flex;justify-content:space-between;font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8e9ab8;margin-top:8px;}
+    .tl-events{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
+    .ev{
+      position:relative;padding:14px 16px;border-radius:14px;
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+      animation:evlight 7s linear infinite;
+    }
+    .tl-mark{position:absolute;top:50%;left:var(--p);width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#8e9ab8;animation:evdot 7s linear infinite;}
+    .tl-mark b{position:absolute;left:50%;top:-24px;transform:translateX(-50%);font-size:.66rem;font-weight:800;color:#8fd7ff;font-family:'Plus Jakarta Sans';letter-spacing:.04em;}
+    .tl-mark-2{width:18px;height:18px;margin:-9px 0 0 -9px;background:transparent !important;border:2px solid #8e9ab8;animation-name:evring;}
+    .tl-mark-2 b{top:auto;bottom:-24px;}
+    .tl-mark-1{animation-delay:1.1s;} .tl-mark-2{animation-delay:1.3s;} .tl-mark-3{animation-delay:3.9s;}
+    .ev .evn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(143,215,255,.14);border:1px solid rgba(143,215,255,.4);font-size:.64rem;color:#8fd7ff;}
+    @keyframes evring{0%,14%{border-color:#8e9ab8;box-shadow:none;}18%,100%{border-color:#22d3ee;box-shadow:0 0 14px rgba(34,211,238,.9);}}
+    .ev .when{font-size:.74rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8fd7ff;display:flex;align-items:center;gap:8px;}
+    .ev .who{font-weight:600;font-size:.88rem;color:#dfe5f6;margin-top:4px;}
+    .ev .what{font-family:'JetBrains Mono',monospace;font-size:.86rem;color:#c3cce6;margin-top:6px;line-height:1.5;}
+    .ev .what mark{background:transparent;color:inherit;padding:1px 6px;border-radius:6px;font-weight:600;}
+    .ev-1 .what mark{background:rgba(96,165,250,.2);color:#93c5fd;}
+    .ev-2 .what mark{background:rgba(252,211,77,.18);color:#fcd34d;}
+    .ev-3 .what mark{background:rgba(252,165,165,.18);color:#fca5a5;}
+    @keyframes evlight{0%,14%{border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.05);}18%,100%{border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.08);}}
+    @keyframes evdot{0%,14%{background:#8e9ab8;box-shadow:none;}18%,100%{background:#22d3ee;box-shadow:0 0 14px rgba(34,211,238,.9);}}
+    .ev-1{animation-delay:1.1s;} .ev-2{animation-delay:1.3s;} .ev-3{animation-delay:3.9s;}
+    @media(max-width:900px){
+      .stage{padding:22px 18px 20px;border-radius:22px;}
+      .cs-grid{grid-template-columns:1fr;gap:18px;}
+      .cs-lines{display:none;}
+      .cs-spacer{min-height:0;height:30px;width:2px;margin:0 auto;border-radius:2px;background:repeating-linear-gradient(180deg,#7ff0ff 0 6px,transparent 6px 13px);opacity:.75;}
+      .cs-sources{flex-direction:row;flex-wrap:wrap;}
+      .chip{flex:1 1 150px;flex-direction:column;align-items:flex-start;gap:6px;}
+      .tl-events{grid-template-columns:1fr;gap:10px;margin-top:12px;}
+      .tl-mark b{display:none;}
+    }
+
+    /* =====================================================================
+       Sections / bands
+       ===================================================================== */
+    section{padding:88px 0;position:relative;}
+    section[id]{scroll-margin-top:calc(var(--navh) + 8px);}
+    .band-soft{background:var(--soft);}
+    .band-dark{background:linear-gradient(180deg,var(--d-bg2) 0%,var(--d-bg) 100%);color:var(--d-ink);}
+    .divider{height:1px;background:var(--grad-line);position:relative;z-index:1;}
+    .divider.glow{box-shadow:0 0 24px rgba(109,40,217,.35);}
+    .eyebrow{
+      display:inline-flex;align-items:center;gap:9px;
+      font-weight:700;font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;
+      padding:6px 14px;border-radius:999px;margin-bottom:16px;
+      background:var(--grad-soft);color:var(--brand);border:1px solid var(--brand-l2);
+    }
+    .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--grad);}
+    .band-dark .eyebrow{color:#c9d7ff;border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.06);}
+    .sec-head{text-align:center;margin-bottom:40px;}
+    h2.section-title{font-size:clamp(1.85rem,4.4vw,2.8rem);font-weight:800;letter-spacing:-.035em;line-height:1.1;margin:0 0 16px;text-wrap:balance;}
+    .band-dark h2.section-title{color:#fff;}
+    h3.sub-title{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;margin:0 0 14px;color:var(--ink);}
+    .section-sub{text-align:center;color:var(--muted);max-width:760px;margin:0 auto;font-size:1.04rem;}
+    .band-dark .section-sub{color:var(--d-muted);}
+    .abstract p{font-size:1.06rem;color:var(--muted);margin:0;}
+    html.dark .abstract p{color:#c5cde0;}
+    .abstract b{color:var(--ink);font-weight:700;}
+    .prose p{margin:0 0 14px;color:var(--muted);}
+    html.dark .prose p{color:#c5cde0;}
+    .prose p:last-child{margin-bottom:0;}
+    .prose b{color:var(--ink);}
+
+    /* =====================================================================
+       News timeline
+       ===================================================================== */
+    .news-sec{padding:72px 0 64px;}
+    .newslist{list-style:none;padding:0;margin:8px auto 0;max-width:760px;position:relative;}
+    .newslist::before{content:"";position:absolute;left:9px;top:12px;bottom:12px;width:2px;background:linear-gradient(180deg,var(--violet),var(--cyan),transparent);border-radius:2px;opacity:.6;}
+    .newslist li{position:relative;padding:6px 0 22px 42px;color:var(--muted);font-size:1rem;line-height:1.6;display:flex;flex-direction:column;gap:2px;}
+    .newslist li:last-child{padding-bottom:4px;}
+    .newslist li::before{content:"";position:absolute;left:0;top:12px;width:20px;height:20px;border-radius:50%;background:var(--grad);box-shadow:0 0 0 4px var(--bg),0 0 0 6px var(--brand-l2);}
+    .newslist li.soon::before{background:var(--bg);border:2px dashed var(--brand);box-sizing:border-box;}
+    .newslist li:first-child::after{content:"";position:absolute;left:0;top:12px;width:20px;height:20px;border-radius:50%;box-shadow:0 0 0 0 rgba(109,40,217,.6);animation:ping 2.4s ease-out infinite;}
+    .newslist .d{color:var(--brand);font-weight:700;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;}
+    .newslist b{color:var(--ink);font-weight:600;}
+
+    /* =====================================================================
+       Figures
+       ===================================================================== */
+    .fig{
+      background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+      padding:18px;box-shadow:var(--shadow);position:relative;
+    }
+    .fig img{width:100%;height:auto;display:block;border-radius:10px;}
+    figcaption{font-size:.93rem;color:var(--muted);margin-top:16px;line-height:1.6;}
+    figcaption b{color:var(--ink);}
+    .fig-wide{max-width:1100px;margin-left:auto;margin-right:auto;}
+    .fig.glow{border-color:transparent;isolation:isolate;box-shadow:var(--shadow),0 30px 90px -20px rgba(109,40,217,.35),0 10px 40px -10px rgba(34,211,238,.18);}
+    .fig.glow::before{
+      content:"";position:absolute;inset:0;border-radius:var(--radius);padding:1.5px;pointer-events:none;
+      background:conic-gradient(from 90deg at 50% 50%,#2b4f9e,#6d28d9,#22d3ee,#2b4f9e);
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;
+    }
+    html.dark .fig img{background:#fff;}
+    a.zoom{display:block;position:relative;overflow:hidden;border-radius:10px;}
+    a.zoom img{transition:transform .5s cubic-bezier(.2,.7,.2,1);}
+    a.zoom:hover img{transform:scale(1.015);}
+    a.zoom::after{
+      content:"\f00e";font-family:"Font Awesome 6 Free";font-weight:900;
+      position:absolute;top:12px;right:12px;color:#fff;background:rgba(10,16,36,.7);
+      width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+      font-size:.85rem;opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s;
+      -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    }
+    a.zoom:hover::after{opacity:1;transform:none;}
+    a.zoom:hover{text-decoration:none;}
+
+    /* overview grid (teaser + abstract) */
+    .overview{display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);gap:44px;align-items:start;}
+    @media(max-width:900px){.overview{grid-template-columns:1fr;}.overview .fig{max-width:600px;margin:0 auto;}}
+
+    /* =====================================================================
+       Stat tiles (dark band) + category cards
+       ===================================================================== */
+    .tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-top:8px;}
+    @media(max-width:1000px){.tiles{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:560px){.tiles{grid-template-columns:repeat(2,1fr);gap:12px;}}
+    .tile{
+      position:relative;border-radius:18px;padding:22px 14px 18px;text-align:center;
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+      transition:transform .25s,background .25s;overflow:hidden;
+    }
+    .tile::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55;transition:opacity .25s;}
+    .tile::after{content:"";position:absolute;left:50%;top:-40px;width:140px;height:80px;margin-left:-70px;background:radial-gradient(ellipse,rgba(34,211,238,.28),transparent 70%);filter:blur(10px);opacity:0;transition:opacity .3s;}
+    .tile:hover{transform:translateY(-4px);background:rgba(255,255,255,.07);}
+    .tile:hover::before{opacity:1;} .tile:hover::after{opacity:1;}
+    .tile .n{font-family:'Plus Jakarta Sans';font-weight:800;font-size:clamp(1.7rem,3.2vw,2.4rem);letter-spacing:-.04em;line-height:1.1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#fff 0%,#c9d7ff 50%,#7ff0ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+    .tile .l{font-size:.86rem;color:#e3e8f6;margin-top:8px;line-height:1.35;font-weight:600;}
+    .tile .s{font-size:.74rem;color:#8e9ab8;margin-top:3px;line-height:1.4;}
+
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;perspective:1200px;}
+    @media(max-width:860px){.cards{grid-template-columns:1fr;}}
+    .card{
+      --c:var(--er);--cl:var(--er-l);--cg:var(--er-g);
+      position:relative;border-radius:22px;padding:30px 28px;overflow:hidden;
+      background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);
+      transition:transform .25s ease,box-shadow .3s ease;transform-style:preserve-3d;will-change:transform;
+    }
+    .band-dark .card{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);box-shadow:0 20px 50px rgba(0,0,0,.35);}
+    .card::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--c),transparent);}
+    .card::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,var(--cg),transparent 70%);filter:blur(10px);pointer-events:none;}
+    .card:hover{box-shadow:var(--shadow-h);}
+    .card .ic{width:50px;height:50px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:1.25rem;color:#fff;background:var(--c);margin-bottom:16px;box-shadow:0 10px 24px var(--cg);}
+    .card h3{margin:0 0 10px;font-size:1.3rem;letter-spacing:-.02em;color:var(--c);}
+    .band-dark .card h3{color:#fff;}
+    .card p{margin:0;font-size:.97rem;color:var(--muted);line-height:1.6;}
+    .band-dark .card p{color:#b8c2dd;}
+    .card.cr{--c:var(--cr);--cl:var(--cr-l);--cg:var(--cr-g);}
+    .card.uns{--c:var(--uns);--cl:var(--uns-l);--cg:var(--uns-g);}
+    .band-dark .card.er .ic{background:linear-gradient(135deg,#2b4f9e,#5b8aef);}
+    .band-dark .card.cr .ic{background:linear-gradient(135deg,#c2410c,#fb923c);}
+    .band-dark .card.uns .ic{background:linear-gradient(135deg,#6d28d9,#a78bfa);}
+    .card .tag{position:absolute;top:18px;right:18px;font-size:.68rem;font-weight:800;letter-spacing:.1em;padding:3px 9px;border-radius:999px;background:var(--cl);color:var(--c);}
+    .band-dark .card .tag{background:rgba(255,255,255,.1);color:#dfe5f6;}
+
+    /* =====================================================================
+       Pipeline
+       ===================================================================== */
+    .pipeline{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch;gap:0;margin-top:48px;}
+    .pstep{
+      position:relative;background:var(--card);border:1px solid var(--line);
+      border-radius:20px;padding:26px 24px;box-shadow:var(--shadow);transition:transform .25s,box-shadow .3s;overflow:hidden;
+    }
+    .pstep::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--grad);opacity:.8;}
+    .pstep:hover{transform:translateY(-4px);box-shadow:var(--shadow-h);}
+    .pstep .num{
+      width:40px;height:40px;border-radius:12px;background:var(--grad);color:#fff;
+      display:inline-flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;margin-bottom:14px;font-family:'Plus Jakarta Sans';
+      box-shadow:0 8px 20px rgba(109,40,217,.3);
+    }
+    .pstep h4{margin:0 0 8px;font-size:1.1rem;letter-spacing:-.02em;}
+    .pstep p{margin:0;font-size:.9rem;color:var(--muted);line-height:1.6;}
+    .pstep p b{color:var(--ink);}
+    .parrow{display:flex;align-items:center;justify-content:center;width:56px;position:relative;}
+    .parrow::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(90deg,var(--brand),var(--cyan));opacity:.5;}
+    .parrow i{position:relative;color:#fff;width:28px;height:28px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:.8rem;box-shadow:0 6px 16px rgba(109,40,217,.35);}
+    .parrow::after{content:"";position:absolute;left:0;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:flow 1.8s linear infinite;}
+    @keyframes flow{from{left:0;opacity:0;}20%{opacity:1;}80%{opacity:1;}to{left:calc(100% - 8px);opacity:0;}}
+    @media(max-width:860px){.pipeline{grid-template-columns:1fr;}.parrow{width:auto;height:48px;}.parrow::before{left:50%;right:auto;top:0;bottom:0;width:2px;height:auto;margin-left:-1px;}.parrow::after{display:none;}.parrow i{transform:rotate(90deg);}}
+    .callout{
+      position:relative;border-radius:20px;padding:28px 30px;margin-top:48px;
+      background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden;
+    }
+    .callout::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad);}
+    .callout .ic{position:absolute;right:22px;bottom:16px;font-size:2.6rem;color:var(--brand);opacity:.12;pointer-events:none;}
+    @media(min-width:721px){.callout{padding-right:96px;}}
+
+    /* =====================================================================
+       Tables
+       ===================================================================== */
+    .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--card);}
+    table{border-collapse:collapse;width:100%;font-size:.92rem;background:var(--card);}
+    th,td{padding:11px 13px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap;}
+    thead th{background:linear-gradient(180deg,#121b36,#0c1226);color:#fff;font-weight:700;font-family:'Plus Jakarta Sans';border-bottom:none;font-size:.86rem;letter-spacing:-.01em;}
+    thead tr:first-child th{border-bottom:1px solid rgba(255,255,255,.14);}
+    td:first-child,th:first-child{text-align:left;}
+    tbody td:first-child{font-weight:600;}
+    tbody tr{transition:background .15s;}
+    tbody tr:hover{background:var(--brand-l);}
+    tbody td b{display:inline-block;background:var(--grad);color:#fff;font-weight:700;padding:2px 9px;border-radius:999px;font-variant-numeric:tabular-nums;box-shadow:0 4px 12px rgba(109,40,217,.25);}
+    tr.group td{text-align:left;font-weight:800;background:var(--soft);color:var(--muted);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;border-top:1px solid var(--line);padding:8px 13px;}
+    tr.nrow td{color:var(--muted-l);font-size:.8rem;font-style:italic;background:var(--soft);font-weight:400;}
+    .colsep{border-left:1px solid var(--line);}
+    thead .colsep{border-left:1px solid rgba(255,255,255,.14);}
+    .tbl-cap{font-size:.92rem;color:var(--muted);margin:18px auto 0;text-align:center;max-width:860px;line-height:1.6;}
+    .scroll-hint{display:none;text-align:center;color:var(--muted-l);font-size:.78rem;margin:10px 0 0;}
+    table.t5{font-size:.9rem;}
+    table.t5 th,table.t5 td{padding:11px 12px;}
+    td.has-bar{position:relative;padding-bottom:22px;min-width:104px;font-weight:700;}
+    td.has-bar .bar{position:absolute;left:12px;right:12px;bottom:7px;height:6px;border-radius:3px;background:var(--line);overflow:hidden;pointer-events:none;}
+    td.has-bar .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--violet,#6d28d9) 70%,var(--cyan));border-radius:3px;transition:width 1.1s cubic-bezier(.2,.7,.2,1);box-shadow:0 0 8px rgba(34,211,238,.35);}
+    td.has-bar.in .bar i{width:var(--w);}
+
+    /* taxonomy table */
+    table.tax td.wrap{white-space:normal;text-align:left;min-width:230px;line-height:1.5;color:var(--muted);font-weight:400;}
+    table.tax td.ex{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:.84rem;color:var(--ink);min-width:260px;}
+    table.tax td.ex .q{color:var(--brand);font-weight:700;margin-right:3px;}
+    table.tax td.task{font-weight:700;text-align:left;color:var(--ink);}
+    table.tax td.num{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;font-weight:600;}
+    table.tax th{text-align:left;}
+    table.tax td.cat{text-align:left;vertical-align:top;white-space:normal;min-width:170px;border-right:1px solid var(--line);}
+    table.tax td.cat span{display:block;}
+    table.tax .cat-name{font-weight:800;font-family:'Plus Jakarta Sans';font-size:1rem;letter-spacing:-.01em;}
+    table.tax .cat-sub{font-size:.8rem;color:var(--muted);font-style:italic;}
+    table.tax .cat-n{font-size:.76rem;color:var(--muted-l);margin-top:6px;font-weight:600;}
+    table.tax td.cat-er{box-shadow:inset 5px 0 0 0 var(--er);background:var(--er-l);} table.tax td.cat-er .cat-name{color:var(--er);}
+    table.tax td.cat-cr{box-shadow:inset 5px 0 0 0 var(--cr);background:var(--cr-l);} table.tax td.cat-cr .cat-name{color:var(--cr);}
+    table.tax td.cat-uns{box-shadow:inset 5px 0 0 0 var(--uns);background:var(--uns-l);} table.tax td.cat-uns .cat-name{color:var(--uns);}
+    table.tax tbody tr:hover{background:transparent;}
+    table.tax tbody td:first-child{font-weight:400;}
+
+    /* =====================================================================
+       Tabs (segmented control)
+       ===================================================================== */
+    .tabs{display:inline-flex;justify-content:center;gap:4px;margin:0 0 24px;padding:5px;border-radius:999px;background:var(--soft);border:1px solid var(--line);position:relative;flex-wrap:wrap;}
+    .tabs-wrap{text-align:center;}
+    .tab{
+      font:inherit;font-weight:600;font-size:.92rem;padding:9px 20px;border-radius:999px;cursor:pointer;
+      background:transparent;border:0;color:var(--muted);transition:background .2s,color .2s,box-shadow .2s;
+    }
+    .tab:hover{color:var(--brand);}
+    .tab[aria-selected="true"]{background:var(--grad);color:#fff;box-shadow:0 6px 18px rgba(109,40,217,.3);}
+    .tabpane{display:none;}
+    .tabpane.active{display:block;animation:paneIn .4s ease;}
+    @keyframes paneIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+    /* =====================================================================
+       Takeaways + analysis cards
+       ===================================================================== */
+    .takeaways{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+    @media(max-width:860px){.takeaways{grid-template-columns:1fr;}}
+    .takeaways li{position:relative;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px 24px 22px;box-shadow:var(--shadow);font-size:.95rem;color:var(--muted);line-height:1.6;overflow:hidden;transition:transform .25s,box-shadow .3s;}
+    .takeaways li:hover{transform:translateY(-4px);box-shadow:var(--shadow-h);}
+    .takeaways li::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:var(--grad);}
+    .takeaways li b{display:flex;align-items:center;gap:10px;color:var(--ink);font-family:'Plus Jakarta Sans';font-size:1.08rem;margin-bottom:10px;letter-spacing:-.01em;}
+    .takeaways li b i{width:36px;height:36px;border-radius:11px;background:var(--grad-soft);color:var(--brand);display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;}
+    .acards{display:grid;grid-template-columns:1fr;gap:26px;margin-top:48px;max-width:1040px;margin-left:auto;margin-right:auto;}
+    .acard{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow);min-width:0;}
+    .acard h3.sub-title{margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+    .acard h3.sub-title::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--grad);flex-shrink:0;}
+    .acard .table-wrap{box-shadow:none;}
+    .acard .tbl-cap{text-align:left;margin-top:14px;font-size:.88rem;}
+    .acard table{font-size:.88rem;}
+    .acard th,.acard td{padding:9px 11px;}
+
+    /* =====================================================================
+       Gallery (dark band)
+       ===================================================================== */
+    .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+    @media(max-width:900px){.gallery{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:480px){.gallery{grid-template-columns:1fr;}}
+    .gitem{
+      display:block;position:relative;border-radius:18px;overflow:hidden;color:#fff;
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+      box-shadow:0 16px 40px rgba(0,0,0,.35);transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s,border-color .3s;
+    }
+    .gitem:hover{transform:translateY(-6px) scale(1.01);box-shadow:0 26px 60px rgba(0,0,0,.5),0 0 0 1px rgba(34,211,238,.35);text-decoration:none;border-color:rgba(34,211,238,.4);}
+    .gthumb{position:relative;aspect-ratio:4/3;overflow:hidden;background:#fff;}
+    .gthumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;transition:transform .6s cubic-bezier(.2,.7,.2,1);}
+    .gitem:hover .gthumb img{transform:scale(1.04);}
+    .gthumb::after{
+      content:"\f00e";font-family:"Font Awesome 6 Free";font-weight:900;
+      position:absolute;top:12px;right:12px;color:#fff;background:rgba(10,16,36,.72);
+      width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.85rem;opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s;
+    }
+    .gitem:hover .gthumb::after{opacity:1;transform:none;}
+    .glabel{padding:12px 16px;font-size:.92rem;font-weight:600;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.03);border-top:1px solid rgba(255,255,255,.08);}
+    .gtag{font-size:.66rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:rgba(126,162,255,.18);color:#b9ccff;border:1px solid rgba(126,162,255,.3);}
+    .gtag-cr{background:rgba(251,146,60,.16);color:#ffc49a;border-color:rgba(251,146,60,.32);}
+    .gtag-uns{background:rgba(196,181,253,.16);color:#d9ccff;border-color:rgba(196,181,253,.32);}
+    .gtag-records{background:rgba(94,234,212,.14);color:#9ff3e4;border-color:rgba(94,234,212,.3);}
+    .band-dark .fig{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);box-shadow:0 30px 80px rgba(0,0,0,.45);}
+    .band-dark figcaption{color:#b8c2dd;}
+    .band-dark figcaption b{color:#fff;}
+    .band-dark .fig img{background:#fff;}
+
+    /* =====================================================================
+       Lightbox
+       ===================================================================== */
+    .lb{position:fixed;inset:0;z-index:100;background:rgba(5,8,18,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:28px;}
+    .lb.open{display:flex;animation:fadeIn .25s ease;}
+    .lb-inner{position:relative;max-width:min(1200px,100%);max-height:100%;display:flex;flex-direction:column;align-items:center;}
+    .lb-scroll{max-height:calc(100vh - 120px);overflow:auto;border-radius:14px;background:#fff;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12);}
+    .lb-scroll img{display:block;max-width:min(1200px,calc(100vw - 56px));width:auto;height:auto;}
+    .lb-cap{color:#dde6f5;font-size:.92rem;margin-top:14px;text-align:center;display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;}
+    .lb-cap a{color:#8fe7ff;}
+    .lb-close{position:fixed;top:16px;right:18px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:999px;width:42px;height:42px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s;}
+    .lb-close:hover{background:rgba(255,255,255,.22);transform:rotate(90deg);}
+    .lb-nav{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:999px;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:background .2s;}
+    .lb-nav:hover{background:rgba(255,255,255,.22);}
+    .lb-prev{left:14px;} .lb-next{right:14px;}
+    @media(max-width:720px){.lb{padding:14px;}.lb-scroll{max-height:calc(100vh - 110px);}.lb-scroll img{max-width:calc(100vw - 28px);}.lb-nav{width:36px;height:36px;top:auto;bottom:14px;transform:none;}}
+    body.lb-locked{overflow:hidden;}
+
+    /* =====================================================================
+       Footer
+       ===================================================================== */
+    footer{position:relative;padding:64px 0 48px;background:var(--d-bg);color:var(--d-ink);text-align:center;overflow:hidden;}
+    footer::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#2b4f9e,#6d28d9,#22d3ee,#6d28d9,#2b4f9e);background-size:200% 100%;animation:shimmer 8s linear infinite;}
+    @keyframes shimmer{to{background-position:200% 0;}}
+    footer::after{content:"";position:absolute;left:50%;top:-200px;width:900px;height:400px;margin-left:-450px;background:radial-gradient(ellipse,rgba(109,40,217,.25),transparent 70%);filter:blur(30px);pointer-events:none;}
+    footer .wrap{position:relative;}
+    .lab-logo{display:inline-block;margin:0 auto 14px;line-height:0;}
+    .lab-logo img{height:64px;width:auto;display:block;transition:transform .2s;filter:invert(1) hue-rotate(180deg) brightness(1.15);}
+    .lab-logo:hover img{transform:translateY(-3px);}
+    .lab-cap{color:#b8c2dd;font-size:.92rem;margin:0 0 24px;font-weight:600;letter-spacing:.01em;}
+    .foot-links{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:26px;font-size:.92rem;font-weight:600;}
+    .foot-links a,.foot-links span{color:#dfe5f6;display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);transition:background .2s,border-color .2s,transform .2s;}
+    .foot-links span{color:#8e9ab8;border-style:dashed;}
+    .foot-links a:hover{color:#fff;text-decoration:none;background:rgba(255,255,255,.1);border-color:rgba(34,211,238,.45);transform:translateY(-2px);}
+    .foot-note{color:#8e9ab8;font-size:.88rem;line-height:1.7;max-width:720px;margin:0 auto;}
+    .foot-note a{color:#b8c2dd;text-decoration:underline;}
+    .foot-note code.inl{background:rgba(255,255,255,.08);color:#dfe5f6;}
+
+    /* misc */
+    .mt40{margin-top:40px;}
+    .mt48{margin-top:48px;}
+    code.inl{background:var(--brand-l);color:var(--brand-dd);padding:1px 7px;border-radius:6px;font-family:'JetBrains Mono';font-size:.85em;white-space:nowrap;}
+    html.dark code.inl{color:#c6d6ff;}
+
+    /* =====================================================================
+       Mobile
+       ===================================================================== */
+    @media(max-width:720px){
+      body{font-size:16px;}
+      header.hero{padding:calc(var(--navh) + 44px) 0 40px;}
+      h1.title{font-size:clamp(1.65rem,7.6vw,2.4rem);}
+      section{padding:60px 0;}
+      .wrap{padding:0 16px;}
+      .authors{font-size:.98rem;line-height:1.95;}
+      .scroll-hint{display:block;}
+      th,td{padding:8px 10px;font-size:.82rem;}
+      table{font-size:.82rem;}
+      .fig{padding:12px;}
+      .buttons{gap:10px;margin-top:28px;}
+      .btn{padding:11px 18px;font-size:.92rem;}
+      .vcard{padding:8px;border-radius:20px;margin-top:40px;}
+      .vframe{border-radius:14px;}
+      .play-ov{align-items:center;padding:0 0 0 10px;background:linear-gradient(90deg,rgba(7,11,24,.35),rgba(7,11,24,0) 40%);}
+      .play-ov .ring{padding:4px;gap:0;}
+      .play-ov .ring .lbl{display:none;}
+      .play-ov .ring .pb{width:40px;height:40px;}
+      .scroll-cue{display:none;}
+      .kicker{font-size:.7rem;padding:7px 12px;gap:8px;}
+      .card{padding:24px 20px;}
+      .callout{padding:22px 20px;}
+      .callout .ic{display:none;}
+      .acard{padding:14px;}
+      .sec-head{margin-bottom:28px;}
+      .conflict-band{padding-bottom:56px;}
+    }
+
+    /* =====================================================================
+       Reduced motion
+       ===================================================================== */
+    @media(prefers-reduced-motion:reduce){
+      html{scroll-behavior:auto;}
+      *,*::before,*::after{animation:none !important;transition:none !important;}
+      html.js .reveal,html.js .reveal-scale,html.js .t-line,html.js .fade{opacity:1;transform:none;clip-path:none;}
+      td.has-bar .bar i{width:var(--w);}
+      .tl-fill{width:100%;}
+      .tl-head-dot{left:100%;}
+      .tl-mark{background:#22d3ee;box-shadow:0 0 14px rgba(34,211,238,.9);}
+      .tl-mark-2{border-color:#22d3ee;}
+      .ev{border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.08);}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ======== NAV ======== -->
+  <nav class="topbar" id="topbar">
+    <div class="wrap">
+      <div class="nav-left">
+        <a class="nav-logo" href="https://mlv.kaist.ac.kr/" target="_blank" rel="noopener" title="MLV Lab &mdash; Machine Learning &amp; Vision Lab, KAIST"><img src="static/logos/mlv_logo.png" alt="MLV Lab" width="364" height="140"></a>
+        <span class="nav-sep" aria-hidden="true"></span>
+        <a class="brand-mini" href="#top" aria-label="MMEnterprise-Bench &mdash; home"><span>MMEnterprise&#8209;<b>Bench</b></span></a>
+      </div>
+      <div class="nav-right">
+        <div class="navlinks">
+          <a href="#video">Video</a>
+          <a href="#news">News</a>
+          <a href="#abstract">Abstract</a>
+          <a href="#tasks">Tasks</a>
+          <a href="#benchmark">Benchmark</a>
+          <a href="#results">Results</a>
+          <a href="#analysis">Analysis</a>
+          <a href="#examples">Examples</a>
+        </div>
+        <button id="theme-toggle" class="theme-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode" aria-pressed="false">
+          <svg class="ic-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="ic-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.7 4.7l1.6 1.6M17.7 17.7l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.7 19.3l1.6-1.6M17.7 6.3l1.6-1.6"/></g></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ======== HERO ======== -->
+  <header class="hero" id="top">
+    <div class="aurora" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="kicker fade" style="--d:.05s"><span class="dot" aria-hidden="true"></span>Benchmark <span class="sep">&middot;</span> 1,613 questions <span class="sep">&middot;</span> 30 projects <span class="sep">&middot;</span> 10 multimodal LLMs</div>
+
+      <h1 class="title">
+        <span class="t-line" style="--d:.1s"><span class="brand">MMEnterprise-Bench</span><span class="colon">:</span></span>
+        <span class="t-line rest" style="--d:.28s">Evaluating Enterprise Agents</span>
+        <span class="t-line rest" style="--d:.44s">over Evolving Multimodal Records</span>
+      </h1>
+
+      <div class="authors fade" style="--d:.7s">
+        <a class="au" href="https://www.seohyunleee.com/" target="_blank" rel="noopener">Seohyun Lee<sup class="sup">1,&lowast;</sup></a>
+        <a class="au" href="https://jonghakim35.github.io/" target="_blank" rel="noopener">Jongha Kim<sup class="sup">2,&lowast;</sup></a>
+        <a class="au" href="https://ikodoh.github.io/" target="_blank" rel="noopener">Dohwan Ko<sup class="sup">2</sup></a>
+        <a class="au" href="https://simplewhite9.github.io/" target="_blank" rel="noopener">Ji Soo Lee<sup class="sup">1</sup></a>
+        <a class="au" href="https://choisw0823.github.io" target="_blank" rel="noopener">Seoung Choi<sup class="sup">1</sup></a>
+        <span class="au">Jayun Ku<sup class="sup">1</sup></span>
+        <a class="au" href="https://www.hyunwoojkim.com/home" target="_blank" rel="noopener">Hyunwoo J. Kim<sup class="sup">1,&dagger;</sup></a>
+      </div>
+      <div class="affil fade" style="--d:.85s">
+        <span><sup class="sup">1</sup>&nbsp;KAIST</span>
+        <span><sup class="sup">2</sup>&nbsp;Korea University</span>
+      </div>
+      <div class="notes fade" style="--d:.9s"><span class="sup">&lowast;</span>&nbsp;Equal contribution&nbsp;&nbsp;&nbsp;<span class="sup">&dagger;</span>&nbsp;Corresponding author</div>
+
+      <div class="buttons fade" style="--d:1s">
+        <a class="btn primary" id="paper-btn" href="https://arxiv.org/abs/2610.27911" target="_blank" rel="noopener"><i class="fas fa-file-lines"></i> Paper</a>
+        <a class="btn" id="code-btn" href="https://github.com/mlvlab/MMEnterprise-Bench" target="_blank" rel="noopener"><i class="fab fa-github"></i> Code</a>
+        <a class="btn ghost" id="data-btn" href="#" title="Dataset release coming soon" aria-disabled="true" onclick="return false;"><i class="fas fa-database"></i> Dataset <span class="soon">coming soon</span></a>
+        <a class="btn ghost" id="lb-btn" href="#" title="Leaderboard coming soon" aria-disabled="true" onclick="return false;"><i class="fas fa-trophy"></i> Leaderboard <span class="soon">coming soon</span></a>
+      </div>
+
+      <div class="vcard fade" id="video" style="--d:1.15s">
+        <div class="vframe">
+          <video class="video-player" id="teaser" controls playsinline preload="metadata" poster="static/videos/teaser_poster.jpg" aria-label="MMEnterprise-Bench teaser video">
+            <source src="static/videos/mmenterprise-bench-teaser.mp4" type="video/mp4">
+            Your browser does not support embedded video. <a href="static/videos/mmenterprise-bench-teaser.mp4">Watch the teaser video directly.</a>
+          </video>
+          <button class="play-ov" id="play-ov" type="button" aria-label="Play teaser video"><span class="ring"><span class="pb"><i class="fas fa-play"></i></span><span class="lbl">Play teaser</span></span></button>
+        </div>
+      </div>
+
+      <div class="scroll-cue fade" style="--d:1.5s" aria-hidden="true"><span class="mouse"></span><span>Scroll</span></div>
+    </div>
+  </header>
+  <div class="divider glow"></div>
+
+  <!-- ======== NEWS ======== -->
+  <section id="news" class="news-sec">
+    <div class="wrap narrow">
+      <div class="sec-head reveal"><span class="eyebrow">News</span></div>
+      <ul class="newslist reveal" style="--d:.1s">
+        <li><span class="d">Oct 21, 2026</span> <span>Preprint released on <a href="https://arxiv.org/abs/2610.27911" target="_blank" rel="noopener">arXiv</a> (2610.27911).</span></li>
+        <li class="soon"><span class="d">Coming soon</span> <span>Dataset and evaluation toolkit, full generation pipeline code, public leaderboard.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ======== ABSTRACT + TEASER ======== -->
+  <section class="band-soft" id="abstract">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Overview</span>
+        <h2 class="section-title">Abstract</h2>
+      </div>
+      <div class="overview">
+        <figure class="fig glow reveal" style="--d:.1s">
+          <a class="zoom" href="static/figures/fig1_teaser.png" data-caption="Figure 1. Conflicts across evolving multimodal records in MMEnterprise-Bench." data-lightbox>
+            <img src="static/figures/fig1_teaser.png" width="960" height="884" decoding="async" alt="Teaser: a cross-source conflict where Notion, Slack and a PDF table give three different fund sizes (27.8bn, 28.7bn, 27.3), and a temporal conflict where a briefing deadline is revised from Sep 1 18:00 to Sep 1 20:00 and later to Sep 2 09:00; an agent must decide which value applies.">
+          </a>
+          <figcaption>
+            <b>Conflicts across evolving multimodal records.</b> Enterprise agents struggle with
+            <b>cross-source conflicts</b> (top), in which different sources contain inconsistent versions of the same
+            information, and <b>temporal conflicts</b> (bottom), in which records undergo multiple revisions over time.
+          </figcaption>
+        </figure>
+        <div class="abstract reveal" style="--d:.2s">
+          <p>
+            Enterprise agents answer questions over workplace records that evolve through team collaboration. As
+            information is shared, corrected, and revised across documents, chats, and figures, multiple versions of
+            the same information accumulate in the workspace. Reliable question answering therefore requires agents
+            to reason over sufficient evidence, resolve cross-source and temporal conflicts, and recognize when the
+            available evidence is insufficient to establish an answer. To systematically evaluate these
+            capabilities, we introduce <b>MMEnterprise-Bench</b>, a benchmark comprising 1,613 questions grounded in
+            evolving multimodal records from simulated collaboration projects, covering three categories:
+            <b>Evidence Reasoning</b>, <b>Conflict Resolution</b>, and <b>Unanswerability</b>. We evaluate 10
+            proprietary and open-source multimodal LLMs and find that even the strongest models struggle when
+            evidence contains cross-source or temporal conflicts or spans multiple images. Moreover, increasing the
+            retrieval budget or employing a larger retriever improves evidence recall but does not consistently
+            translate into higher answer accuracy. These findings highlight the persistent challenges of reasoning
+            over evolving workplace records and establish MMEnterprise-Bench as a testbed for developing more
+            reliable enterprise agents.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ======== AT A GLANCE (dark band) ======== -->
+  <section class="band-dark" id="glance">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">At a glance</span>
+        <h2 class="section-title">What&rsquo;s inside</h2>
+      </div>
+      <div class="tiles stagger">
+        <div class="tile reveal"><div class="n" data-count="1613">1,613</div><div class="l">questions</div><div class="s">1,526 answerable &middot; 87 unanswerable</div></div>
+        <div class="tile reveal"><div class="n" data-count="30">30</div><div class="l">projects</div><div class="s">seeded from public papers &amp; reports</div></div>
+        <div class="tile reveal"><div class="n" data-count="7140">7,140</div><div class="l">retrieval records</div><div class="s">one shared workspace corpus</div></div>
+        <div class="tile reveal"><div class="n" data-count="1415">1,415</div><div class="l">visual records</div><div class="s">PDF pages, slides, images</div></div>
+        <div class="tile reveal"><div class="n" data-count="8">8</div><div class="l">task types</div><div class="s">in 3 categories</div></div>
+        <div class="tile reveal"><div class="n" data-count="2">2</div><div class="l">conflict types</div><div class="s">cross-source &amp; temporal</div></div>
+      </div>
+
+      <div class="cards mt48 stagger">
+        <div class="card er tilt reveal">
+          <span class="tag">ER</span>
+          <div class="ic"><i class="fas fa-magnifying-glass"></i></div>
+          <h3>Evidence Reasoning</h3>
+          <p>Answer from sufficient, non-conflicting evidence spread across chats, emails, meeting notes, trackers,
+          reports, and slides: extraction, attribution, computation, comparison, and interpretation.</p>
+        </div>
+        <div class="card cr tilt reveal">
+          <span class="tag">CR</span>
+          <div class="ic"><i class="fas fa-code-branch"></i></div>
+          <h3>Conflict Resolution</h3>
+          <p>Earlier records are retained rather than overwritten, so superseded values stay in the corpus. Agents must
+          pick the value that applies across sources, or recover the state at a specific point in time.</p>
+        </div>
+        <div class="card uns tilt reveal">
+          <span class="tag">UNS</span>
+          <div class="ic"><i class="fas fa-ban"></i></div>
+          <h3>Unanswerability</h3>
+          <p>Questions built by perturbing one entity or condition of an answerable question, so that no record in the
+          project supports an answer. The agent has to say so instead of guessing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider glow"></div>
+
+  <!-- ======== TASK TAXONOMY ======== -->
+  <section id="tasks">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Task taxonomy</span>
+        <h2 class="section-title">Three categories, eight task types</h2>
+        <p class="section-sub">Evidence Reasoning (ER) derives answers from sufficient evidence, Conflict Resolution (CR) resolves conflicting evidence, and Unanswerability (UNS) identifies questions that cannot be answered from the records.</p>
+      </div>
+      <div class="table-wrap tax-wrap reveal" style="--d:.1s"><table class="tax">
+<thead><tr><th>Category</th><th>Task</th><th>Description</th><th>Example question</th><th>#</th></tr></thead>
+<tbody>
+<tr><td rowspan="5" class="cat cat-er"><span class="cat-name">Evidence Reasoning</span><span class="cat-sub">sufficient evidence</span><span class="cat-n">1,102 questions</span></td><td class="task">Extraction</td><td class="wrap">Extract entities or values explicitly stated in text, tables, or figures.</td><td class="wrap ex"><span class="q">Q:</span> Which model does BLiM use?</td><td class="num">268</td></tr>
+<tr><td class="task">Attribution</td><td class="wrap">Identify the source, requester, author, or communicator of information.</td><td class="wrap ex"><span class="q">Q:</span> Who sent Nora Bell&rsquo;s welcome email?</td><td class="num">80</td></tr>
+<tr><td class="task">Computation</td><td class="wrap">Apply question-specified calculations to recorded values.</td><td class="wrap ex"><span class="q">Q:</span> How much does the deficit-to-GDP share increase?</td><td class="num">310</td></tr>
+<tr><td class="task">Comparison</td><td class="wrap">Compare results or properties to identify differences, rankings, or choices.</td><td class="wrap ex"><span class="q">Q:</span> Which frame setting fits the latency budget?</td><td class="num">212</td></tr>
+<tr><td class="task">Interpretation</td><td class="wrap">Draw conclusions or assess claims using recorded evidence.</td><td class="wrap ex"><span class="q">Q:</span> Do the counts support a 12-risk increase?</td><td class="num">232</td></tr>
+<tr><td rowspan="2" class="cat cat-cr"><span class="cat-name">Conflict Resolution</span><span class="cat-sub">conflicting evidence</span><span class="cat-n">424 questions</span></td><td class="task">Cross-source</td><td class="wrap">Identify conflicting information across records or determine which value applies.</td><td class="wrap ex"><span class="q">Q:</span> Which action-log deadline applies after the correction?</td><td class="num">212</td></tr>
+<tr><td class="task">Temporal</td><td class="wrap">Identify information at a specified time or trace its revisions.</td><td class="wrap ex"><span class="q">Q:</span> What was the deadline at 14:00?</td><td class="num">212</td></tr>
+<tr><td rowspan="1" class="cat cat-uns"><span class="cat-name">Unanswerability</span><span class="cat-sub">insufficient evidence</span><span class="cat-n">87 questions</span></td><td class="task">Unanswerability</td><td class="wrap">Identify missing information or unsupported premises.</td><td class="wrap ex"><span class="q">Q:</span> What is the measured serving cost?</td><td class="num">87</td></tr>
+</tbody></table></div>
+      <p class="scroll-hint"><i class="fas fa-arrows-left-right"></i> &nbsp;Scroll horizontally to see all columns</p>
+      <p class="tbl-cap">Example questions are taken from Table 1 of the paper. The last column gives the number of questions per task (1,613 in total).</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ======== HOW IT IS BUILT ======== -->
+  <section class="band-soft" id="benchmark">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Benchmark construction</span>
+        <h2 class="section-title">How the benchmark is built</h2>
+      </div>
+
+      <figure class="fig fig-wide glow reveal-scale">
+        <a class="zoom" href="static/figures/fig2_pipeline.png" data-caption="Figure 2. MMEnterprise-Bench construction pipeline." data-lightbox>
+          <img src="static/figures/fig2_pipeline.png" width="1880" height="792" loading="lazy" decoding="async" alt="Construction pipeline: seed documents provide key facts and visual assets for a project; organizational context and event planning generate chats and artifacts into a shared workspace of team chat, email, database, documents and slides; a rule-based and LLM-based QA generator with task-specific instructions and quality control produces questions with gold evidence and answers.">
+        </a>
+        <figcaption>
+          <b>Construction pipeline.</b> Each seed document serves as the information source for a project. Based on the
+          extracted information and the project&rsquo;s context, collaborative events and their corresponding records
+          are generated over time. The projects collectively form a shared workspace of evolving multimodal records that
+          contain cross-source and temporal conflicts, over which questions are generated and validated.
+        </figcaption>
+      </figure>
+
+      <div class="pipeline stagger">
+        <div class="pstep reveal">
+          <div class="num">1</div>
+          <h4>Workspace construction</h4>
+          <p>Text, tables, and figures are extracted from 30 public papers and reports. For each project, a team with
+          roles, channels, access relationships, and deadlines is specified, and an LLM plans collaborative events
+          (result sharing, error detection, corrections, document revisions) in chronological order. Events are
+          realized as messages, emails, meeting notes, trackers, reports, and slides; earlier versions are kept.</p>
+        </div>
+        <div class="parrow reveal" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
+        <div class="pstep reveal">
+          <div class="num">2</div>
+          <h4>QA generation</h4>
+          <p>Rule-based generation covers questions derivable from structured project information; an LLM with
+          task-specific instructions generates the rest, jointly producing the question, reference answer, step-by-step
+          solution, and supporting records. Unanswerable questions perturb one entity or condition of an answerable
+          question so that no project record supports an answer.</p>
+        </div>
+        <div class="parrow reveal" aria-hidden="true"><i class="fas fa-arrow-right"></i></div>
+        <div class="pstep reveal">
+          <div class="num">3</div>
+          <h4>Quality control &amp; human validation</h4>
+          <p>Independent LLM-based checks verify records against the source and planned events, and verify that the cited
+          evidence derives the reference answer, flagging ambiguity, wrong answers, and leakage. In a blind audit of 100
+          annotations by three annotators, <b>71%</b> were rejected by no one and <b>29%</b> by at least one; none of
+          the 50 LLM-accepted items was rejected by any annotator, and all 29 human-rejected items had also been rejected
+          by the LLM.</p>
+        </div>
+      </div>
+
+      <div class="narrow callout prose reveal">
+        <i class="fas fa-scale-balanced ic" aria-hidden="true"></i>
+        <p>
+          <b>Evaluation protocol.</b> For each question, a Qwen3-VL-Embedding retriever (2B by default; 8B also released)
+          ranks the 7,140 workspace records; the top-<code class="inl">k</code> records are presented to the model
+          ordered by timestamp and ID, each as its text followed by its image when it has one. An LLM judge
+          (GPT-5.6 Luna) compares the response with the reference answer, and accuracy is reported over all 1,613
+          questions. Both retriever rankings and the judge prompt are released, so results are reproducible without
+          re-running retrieval.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ======== RESULTS ======== -->
+  <section id="results">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Experiments</span>
+        <h2 class="section-title">Main results</h2>
+        <p class="section-sub">Accuracy (%) of 10 multimodal LLMs on all 1,613 questions with the Qwen3-VL-Embedding-2B retriever. Best result per column in bold. Attr. = Attribution, Comput. = Computation, Compar. = Comparison, Interp. = Interpretation, UNS = Unanswerability.</p>
+      </div>
+
+      <div class="tabs-wrap reveal">
+        <div class="tabs" role="tablist" aria-label="Number of retrieved records">
+          <button class="tab" role="tab" id="tab-k10" aria-controls="pane-k10" aria-selected="true" data-pane="pane-k10">k = 10 retrieved records</button>
+          <button class="tab" role="tab" id="tab-k50" aria-controls="pane-k50" aria-selected="false" data-pane="pane-k50">k = 50 retrieved records</button>
+        </div>
+      </div>
+      <div class="tabpane active" id="pane-k10" role="tabpanel" aria-labelledby="tab-k10">
+        <div class="table-wrap reveal" style="--d:.1s"><table class="t5">
+<thead>
+  <tr>
+    <th rowspan="2" style="vertical-align:bottom;">Model</th>
+    <th colspan="5" class="colsep">Evidence Reasoning (ER)</th>
+    <th colspan="2" class="colsep">Conflict Resolution (CR)</th>
+    <th rowspan="2" class="colsep" style="vertical-align:bottom;" title="Unanswerability">UNS</th>
+    <th rowspan="2" class="colsep" style="vertical-align:bottom;">Overall</th>
+  </tr>
+  <tr>
+    <th class="colsep">Extraction</th><th title="Attribution">Attr.</th><th title="Computation">Comput.</th><th title="Comparison">Compar.</th><th title="Interpretation">Interp.</th>
+    <th class="colsep">Cross-source</th><th>Temporal</th>
+  </tr>
+</thead>
+<tbody>
+<tr class="nrow"><td># questions</td><td class="colsep">268</td><td class="">80</td><td class="">310</td><td class="">212</td><td class="">232</td><td class="colsep">212</td><td class="">212</td><td class="colsep">87</td><td class="colsep">1,613</td></tr>
+<tr class="group"><td colspan="10">Proprietary models</td></tr>
+<tr><td>GPT-5.6 Sol</td><td class="colsep">67.5</td><td><b>61.3</b></td><td><b>58.1</b></td><td><b>47.2</b></td><td><b>58.6</b></td><td class="colsep"><b>36.3</b></td><td>32.5</td><td class="colsep">65.5</td><td class="colsep"><b>52.6</b></td></tr>
+<tr><td>GPT-5.6 Luna</td><td class="colsep">66.4</td><td>57.5</td><td>55.5</td><td>44.8</td><td>58.2</td><td class="colsep">35.4</td><td><b>33.5</b></td><td class="colsep">63.2</td><td class="colsep">51.3</td></tr>
+<tr><td>Gemini 3.8 Flash</td><td class="colsep"><b>67.9</b></td><td>52.5</td><td>54.2</td><td>44.3</td><td>34.5</td><td class="colsep">28.8</td><td>30.2</td><td class="colsep"><b>87.4</b></td><td class="colsep">47.6</td></tr>
+<tr><td>Gemini 3.1 Pro</td><td class="colsep">66.8</td><td>58.8</td><td>54.8</td><td>42.5</td><td>30.6</td><td class="colsep">27.4</td><td>28.8</td><td class="colsep">74.7</td><td class="colsep">45.9</td></tr>
+<tr class="group"><td colspan="10">Open-source models</td></tr>
+<tr><td>Qwen3.5-27B</td><td class="colsep">63.1</td><td>52.5</td><td>37.7</td><td>33.5</td><td>28.9</td><td class="colsep">22.6</td><td>20.3</td><td class="colsep">75.9</td><td class="colsep">38.6</td></tr>
+<tr><td>Qwen3.5-9B</td><td class="colsep">60.1</td><td>40.0</td><td>36.5</td><td>25.9</td><td>27.2</td><td class="colsep">14.2</td><td>21.2</td><td class="colsep">73.6</td><td class="colsep">34.9</td></tr>
+<tr><td>Qwen3.5-4B</td><td class="colsep">62.7</td><td>40.0</td><td>37.4</td><td>31.1</td><td>28.4</td><td class="colsep">19.8</td><td>19.8</td><td class="colsep">55.2</td><td class="colsep">36.0</td></tr>
+<tr><td>Qwen3.5-2B</td><td class="colsep">58.6</td><td>20.0</td><td>21.9</td><td>17.9</td><td>12.9</td><td class="colsep">12.7</td><td>13.2</td><td class="colsep">19.5</td><td class="colsep">23.6</td></tr>
+<tr><td>InternVL3.5-8B</td><td class="colsep">63.4</td><td>51.3</td><td>31.9</td><td>23.1</td><td>27.2</td><td class="colsep">15.6</td><td>19.3</td><td class="colsep">36.8</td><td class="colsep">32.7</td></tr>
+<tr><td>Kimi-VL-16B-A3B-Instruct</td><td class="colsep">56.3</td><td>40.0</td><td>14.5</td><td>16.0</td><td>16.4</td><td class="colsep">11.8</td><td>14.2</td><td class="colsep">10.3</td><td class="colsep">22.6</td></tr>
+</tbody></table></div>
+      </div>
+      <div class="tabpane" id="pane-k50" role="tabpanel" aria-labelledby="tab-k50">
+        <div class="table-wrap"><table class="t5">
+<thead>
+  <tr>
+    <th rowspan="2" style="vertical-align:bottom;">Model</th>
+    <th colspan="5" class="colsep">Evidence Reasoning (ER)</th>
+    <th colspan="2" class="colsep">Conflict Resolution (CR)</th>
+    <th rowspan="2" class="colsep" style="vertical-align:bottom;" title="Unanswerability">UNS</th>
+    <th rowspan="2" class="colsep" style="vertical-align:bottom;">Overall</th>
+  </tr>
+  <tr>
+    <th class="colsep">Extraction</th><th title="Attribution">Attr.</th><th title="Computation">Comput.</th><th title="Comparison">Compar.</th><th title="Interpretation">Interp.</th>
+    <th class="colsep">Cross-source</th><th>Temporal</th>
+  </tr>
+</thead>
+<tbody>
+<tr class="nrow"><td># questions</td><td class="colsep">268</td><td class="">80</td><td class="">310</td><td class="">212</td><td class="">232</td><td class="colsep">212</td><td class="">212</td><td class="colsep">87</td><td class="colsep">1,613</td></tr>
+<tr class="group"><td colspan="10">Proprietary models</td></tr>
+<tr><td>GPT-5.6 Sol</td><td class="colsep">77.6</td><td>68.8</td><td><b>71.6</b></td><td><b>67.5</b></td><td><b>73.3</b></td><td class="colsep"><b>55.2</b></td><td><b>56.1</b></td><td class="colsep">72.4</td><td class="colsep"><b>68.0</b></td></tr>
+<tr><td>GPT-5.6 Luna</td><td class="colsep">76.5</td><td>65.0</td><td>69.4</td><td>63.7</td><td>72.4</td><td class="colsep">52.8</td><td>54.2</td><td class="colsep">67.8</td><td class="colsep">65.8</td></tr>
+<tr><td>Gemini 3.8 Flash</td><td class="colsep"><b>78.0</b></td><td>71.3</td><td><b>71.6</b></td><td>65.6</td><td>53.4</td><td class="colsep">46.7</td><td>54.2</td><td class="colsep">74.7</td><td class="colsep">63.9</td></tr>
+<tr><td>Gemini 3.1 Pro</td><td class="colsep">76.9</td><td><b>72.5</b></td><td>69.0</td><td>62.7</td><td>49.6</td><td class="colsep">49.1</td><td>50.9</td><td class="colsep"><b>80.5</b></td><td class="colsep">62.5</td></tr>
+<tr class="group"><td colspan="10">Open-source models</td></tr>
+<tr><td>Qwen3.5-27B</td><td class="colsep">73.9</td><td>56.3</td><td>50.3</td><td>43.9</td><td>42.7</td><td class="colsep">35.8</td><td>38.7</td><td class="colsep">71.3</td><td class="colsep">50.3</td></tr>
+<tr><td>Qwen3.5-9B</td><td class="colsep">71.3</td><td>38.8</td><td>43.9</td><td>37.7</td><td>32.8</td><td class="colsep">26.4</td><td>33.0</td><td class="colsep">63.2</td><td class="colsep">43.1</td></tr>
+<tr><td>Qwen3.5-4B</td><td class="colsep">69.8</td><td>43.8</td><td>48.7</td><td>42.9</td><td>35.3</td><td class="colsep">26.4</td><td>30.2</td><td class="colsep">47.1</td><td class="colsep">43.8</td></tr>
+<tr><td>Qwen3.5-2B</td><td class="colsep">60.8</td><td>25.0</td><td>16.5</td><td>18.4</td><td>18.1</td><td class="colsep">19.3</td><td>16.0</td><td class="colsep">14.9</td><td class="colsep">25.0</td></tr>
+<tr><td>InternVL3.5-8B</td><td class="colsep">66.4</td><td>53.8</td><td>35.5</td><td>28.8</td><td>31.0</td><td class="colsep">24.1</td><td>23.1</td><td class="colsep">29.9</td><td class="colsep">36.6</td></tr>
+<tr><td>Kimi-VL-16B-A3B-Instruct</td><td class="colsep">57.5</td><td>35.0</td><td>12.6</td><td>19.3</td><td>19.4</td><td class="colsep">15.6</td><td>9.9</td><td class="colsep">13.8</td><td class="colsep">23.1</td></tr>
+</tbody></table></div>
+      </div>
+      <p class="scroll-hint"><i class="fas fa-arrows-left-right"></i> &nbsp;Scroll horizontally to see all columns</p>
+      <p class="tbl-cap">The strongest model, GPT-5.6 Sol, reaches only 52.6% (k&nbsp;=&nbsp;10) and 68.0% (k&nbsp;=&nbsp;50). Errors concentrate in Conflict Resolution: at k&nbsp;=&nbsp;10 it scores 67.5% on Extraction but 36.3% on cross-source and 32.5% on temporal conflicts. The best open-source model, Qwen3.5-27B, reaches 50.3% at k&nbsp;=&nbsp;50.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ======== ANALYSIS ======== -->
+  <section class="band-soft" id="analysis">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Analysis</span>
+        <h2 class="section-title">Where enterprise agents fail</h2>
+      </div>
+
+      <ul class="takeaways stagger">
+        <li class="reveal"><b><i class="fas fa-code-branch"></i>Conflicts are the hard part</b>Across models, cross-source accuracy ranges from 11.8% to 36.3% and temporal accuracy from 13.2% to 33.5% at k&nbsp;=&nbsp;10, far below extraction from a single record.</li>
+        <li class="reveal"><b><i class="fas fa-images"></i>Multiple images hurt most</b>GPT-5.6 Sol drops from 83.3% on single-text-record questions to 52.9% with one image and 27.5% with two or more images.</li>
+        <li class="reveal"><b><i class="fas fa-magnifying-glass-chart"></i>Recall is not accuracy</b>Raising k from 50 to 100 lifts recall from 57.0% to 64.8%, yet Qwen3.5-2B falls from 25.0% to 22.2%; the 8B retriever adds recall but not consistently accuracy.</li>
+      </ul>
+
+      <div class="acards">
+        <div class="acard reveal">
+          <h3 class="sub-title">Accuracy by number and modality of gold evidence records</h3>
+          <div class="table-wrap"><table>
+<thead>
+  <tr>
+    <th rowspan="2" style="vertical-align:bottom;">Model</th>
+    <th colspan="2" class="colsep">Text</th>
+    <th colspan="2" class="colsep">Image</th>
+    <th rowspan="1" class="colsep">Text + Image</th>
+  </tr>
+  <tr>
+    <th class="colsep">1</th><th>2+</th>
+    <th class="colsep">1</th><th>2+</th>
+    <th class="colsep">2+</th>
+  </tr>
+</thead>
+<tbody>
+<tr class="nrow"><td># questions</td><td class="colsep">324</td><td class="">369</td><td class="colsep">425</td><td class="">138</td><td class="colsep">270</td></tr>
+<tr class="group"><td colspan="6">Proprietary models</td></tr>
+<tr><td>GPT-5.6 Sol</td><td class="colsep"><b>83.3</b></td><td><b>51.5</b></td><td class="colsep"><b>52.9</b></td><td><b>27.5</b></td><td class="colsep">25.6</td></tr>
+<tr><td>GPT-5.6 Luna</td><td class="colsep">81.5</td><td>49.1</td><td class="colsep">52.2</td><td>25.4</td><td class="colsep"><b>25.9</b></td></tr>
+<tr><td>Gemini 3.8 Flash</td><td class="colsep">78.7</td><td>40.9</td><td class="colsep">49.4</td><td>18.8</td><td class="colsep">18.1</td></tr>
+<tr><td>Gemini 3.1 Pro</td><td class="colsep">78.4</td><td>41.5</td><td class="colsep">47.3</td><td>15.2</td><td class="colsep">17.4</td></tr>
+<tr class="group"><td colspan="6">Open-source models</td></tr>
+<tr><td>Qwen3.5-27B</td><td class="colsep">67.0</td><td>34.7</td><td class="colsep">36.7</td><td>13.8</td><td class="colsep">13.7</td></tr>
+<tr><td>Qwen3.5-9B</td><td class="colsep">65.4</td><td>28.7</td><td class="colsep">32.5</td><td>10.1</td><td class="colsep">10.7</td></tr>
+<tr><td>Qwen3.5-4B</td><td class="colsep">69.8</td><td>30.4</td><td class="colsep">33.9</td><td>10.9</td><td class="colsep">13.0</td></tr>
+<tr><td>Qwen3.5-2B</td><td class="colsep">53.1</td><td>19.5</td><td class="colsep">22.1</td><td>6.5</td><td class="colsep">6.3</td></tr>
+<tr><td>InternVL3.5-8B</td><td class="colsep">63.6</td><td>30.4</td><td class="colsep">28.0</td><td>13.8</td><td class="colsep">14.8</td></tr>
+<tr><td>Kimi-VL-16B-A3B-Instruct</td><td class="colsep">55.2</td><td>18.4</td><td class="colsep">16.2</td><td>11.6</td><td class="colsep">8.5</td></tr>
+</tbody></table></div>
+          <p class="scroll-hint"><i class="fas fa-arrows-left-right"></i> &nbsp;Scroll horizontally to see all columns</p>
+          <p class="tbl-cap">2B retriever, k&nbsp;=&nbsp;10. Columns group answerable questions by the modality of their gold evidence (text only, image only, or mixed) and by how many records are required (1 vs. 2+). Every model performs worse when multiple records are needed, and worse again when those records are visual.</p>
+        </div>
+
+        <div class="acard reveal" style="--d:.12s">
+          <h3 class="sub-title">Scaling the retrieval budget and the retriever</h3>
+          <div class="table-wrap"><table>
+<thead>
+  <tr>
+    <th rowspan="2" style="vertical-align:bottom;">Model</th>
+    <th colspan="2" class="colsep">k = 10</th>
+    <th colspan="2" class="colsep">k = 50</th>
+    <th colspan="2" class="colsep">k = 100</th>
+  </tr>
+  <tr>
+    <th class="colsep">2B</th><th>8B</th>
+    <th class="colsep">2B</th><th>8B</th>
+    <th class="colsep">2B</th><th>8B</th>
+  </tr>
+</thead>
+<tbody>
+<tr class="nrow"><td>Evidence Recall@k</td><td class="colsep">41.3</td><td class="">43.0</td><td class="colsep">57.0</td><td class="">59.6</td><td class="colsep">64.8</td><td class="">67.3</td></tr>
+<tr class="group"><td colspan="7">Proprietary models</td></tr>
+<tr><td>GPT-5.6 Sol</td><td class="colsep"><b>52.6</b></td><td><b>53.8</b></td><td class="colsep"><b>68.0</b></td><td><b>70.0</b></td><td class="colsep"><b>75.9</b></td><td><b>77.2</b></td></tr>
+<tr><td>GPT-5.6 Luna</td><td class="colsep">51.3</td><td>52.2</td><td class="colsep">65.8</td><td>66.9</td><td class="colsep">69.9</td><td>71.2</td></tr>
+<tr><td>Gemini 3.8 Flash</td><td class="colsep">47.6</td><td>47.7</td><td class="colsep">63.9</td><td>66.0</td><td class="colsep">72.5</td><td>72.5</td></tr>
+<tr><td>Gemini 3.1 Pro</td><td class="colsep">45.9</td><td>47.7</td><td class="colsep">62.5</td><td>63.1</td><td class="colsep">68.7</td><td>70.3</td></tr>
+<tr class="group"><td colspan="7">Open-source models</td></tr>
+<tr><td>Qwen3.5-27B</td><td class="colsep">38.6</td><td>38.3</td><td class="colsep">50.3</td><td>51.8</td><td class="colsep">56.2</td><td>56.5</td></tr>
+<tr><td>Qwen3.5-9B</td><td class="colsep">34.9</td><td>36.0</td><td class="colsep">43.1</td><td>43.8</td><td class="colsep">47.1</td><td>47.6</td></tr>
+<tr><td>Qwen3.5-4B</td><td class="colsep">36.0</td><td>36.8</td><td class="colsep">43.8</td><td>45.7</td><td class="colsep">46.9</td><td>46.6</td></tr>
+<tr><td>Qwen3.5-2B</td><td class="colsep">23.6</td><td>23.5</td><td class="colsep">25.0</td><td>23.7</td><td class="colsep">22.2</td><td>22.4</td></tr>
+<tr><td>InternVL3.5-8B</td><td class="colsep">32.7</td><td>34.7</td><td class="colsep">36.6</td><td>38.0</td><td class="colsep">36.2</td><td>37.6</td></tr>
+<tr><td>Kimi-VL-16B-A3B-Instruct</td><td class="colsep">22.6</td><td>23.3</td><td class="colsep">23.1</td><td>23.1</td><td class="colsep">23.6</td><td>22.9</td></tr>
+</tbody></table></div>
+          <p class="scroll-hint"><i class="fas fa-arrows-left-right"></i> &nbsp;Scroll horizontally to see all columns</p>
+          <p class="tbl-cap">Overall accuracy (%) for k &isin; {10, 50, 100} with the Qwen3-VL-Embedding-2B and -8B retrievers. The first row reports Evidence Recall@k (macro average over the 1,526 answerable questions). More retrieved records consistently raise recall, but for smaller models higher recall alone does not ensure better answers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider glow"></div>
+
+  <!-- ======== QUALITATIVE (dark band) ======== -->
+  <section class="band-dark" id="examples">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Qualitative examples</span>
+        <h2 class="section-title">What the questions look like</h2>
+      </div>
+
+      <figure class="fig fig-wide glow reveal-scale">
+        <a class="zoom" href="static/figures/fig3_qualitative.png" data-caption="Figure 3. Representative failure cases involving cross-source conflicts (left) and temporal conflicts (right)." data-lightbox>
+          <img src="static/figures/fig3_qualitative.png" width="1880" height="624" loading="lazy" decoding="async" alt="Two failure cases. Left: an interview count is corrected from 43 to 34 in a revised memo that also adds a new row with value 23; asked for the value in the new row, the model answers 34 instead of 23. Right: a deadline is revised from Sep 1 20:00 to Sep 2 18:00; asked for the deadline before the revision, the model returns the revised Sep 2 18:00.">
+        </a>
+        <figcaption>
+          <b>Representative failure cases of GPT-5.6 Sol.</b> <b>Left, cross-source conflict:</b> corrections flow through
+          Slack and a revised memo while a Notion table lags behind; the question targets the newly added row (23), but the
+          model returns the corrected interview count (34). <b>Right, temporal conflict:</b> a deadline moves from
+          Sep&nbsp;1 20:00 to Sep&nbsp;2 18:00 with both values preserved; the model answers the current deadline correctly
+          but returns the revised value when asked for the deadline before the revision.
+        </figcaption>
+      </figure>
+
+      <p class="section-sub mt48 reveal" style="margin-bottom:26px;">One example panel per task type from the paper appendix, plus a sample of the simulated Slack workspace. Click to enlarge.</p>
+      <div class="gallery stagger">
+        <a class="gitem reveal" href="static/figures/ex_extraction.png" data-caption="Extraction" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_extraction.png" loading="lazy" decoding="async" alt="Qualitative example panel: Extraction"></div>
+          <div class="glabel"><span class="gtag gtag-er">ER</span>Extraction</div>
+        </a>
+        <a class="gitem reveal" href="static/figures/ex_attribution.png" data-caption="Attribution" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_attribution.png" loading="lazy" decoding="async" alt="Qualitative example panel: Attribution"></div>
+          <div class="glabel"><span class="gtag gtag-er">ER</span>Attribution</div>
+        </a>
+        <a class="gitem reveal" href="static/figures/ex_computation.png" data-caption="Computation" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_computation.png" loading="lazy" decoding="async" alt="Qualitative example panel: Computation"></div>
+          <div class="glabel"><span class="gtag gtag-er">ER</span>Computation</div>
+        </a>
+        <a class="gitem reveal" href="static/figures/ex_comparison.png" data-caption="Comparison" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_comparison.png" loading="lazy" decoding="async" alt="Qualitative example panel: Comparison"></div>
+          <div class="glabel"><span class="gtag gtag-er">ER</span>Comparison</div>
+        </a>
+        <a class="gitem reveal" href="static/figures/ex_interpretation.png" data-caption="Interpretation" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_interpretation.png" loading="lazy" decoding="async" alt="Qualitative example panel: Interpretation"></div>
+          <div class="glabel"><span class="gtag gtag-er">ER</span>Interpretation</div>
+        </a>
+        <a class="gitem reveal" href="static/figures/ex_cross_source.png" data-caption="Cross-source conflict" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_cross_source.png" loading="lazy" decoding="async" alt="Qualitative example panel: Cross-source conflict"></div>
+          <div class="glabel"><span class="gtag gtag-cr">CR</span>Cross-source conflict</div>
+        </a>
+        <a class="gitem reveal" href="static/figures/ex_temporal.png" data-caption="Temporal conflict" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_temporal.png" loading="lazy" decoding="async" alt="Qualitative example panel: Temporal conflict"></div>
+          <div class="glabel"><span class="gtag gtag-cr">CR</span>Temporal conflict</div>
+        </a>
+        <a class="gitem reveal" href="static/figures/ex_unanswerability.png" data-caption="Unanswerability" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_unanswerability.png" loading="lazy" decoding="async" alt="Qualitative example panel: Unanswerability"></div>
+          <div class="glabel"><span class="gtag gtag-uns">UNS</span>Unanswerability</div>
+        </a>
+        <a class="gitem reveal" href="static/figures/ex_workspace_slack.png" data-caption="Simulated Slack workspace" data-lightbox>
+          <div class="gthumb"><img src="static/figures/ex_workspace_slack.png" loading="lazy" decoding="async" alt="Qualitative example panel: Simulated Slack workspace"></div>
+          <div class="glabel"><span class="gtag gtag-records">Records</span>Simulated Slack workspace</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== FOOTER ======== -->
+  <footer>
+    <div class="wrap">
+      <a class="lab-logo" href="https://mlv.kaist.ac.kr/" target="_blank" rel="noopener" title="MLV Lab, KAIST"><img src="static/logos/mlv_logo.png" alt="MLV Lab, KAIST" width="364" height="140"></a>
+      <p class="lab-cap">Machine Learning &amp; Vision Lab, KAIST</p>
+      <div class="foot-links">
+        <a href="https://github.com/mlvlab/MMEnterprise-Bench" target="_blank" rel="noopener"><i class="fab fa-github"></i> Code</a>
+        <span><i class="fas fa-database"></i> Dataset (coming soon)</span>
+        <span><i class="fas fa-trophy"></i> Leaderboard (coming soon)</span>
+        <a href="https://mlv.kaist.ac.kr/" target="_blank" rel="noopener"><i class="fas fa-flask"></i> MLV Lab</a>
+      </div>
+      <p class="foot-note">
+        Benchmark annotations and simulated records are released under CC BY 4.0; embedded figures and page images keep
+        the rights of their source documents, listed in <code class="inl">seed_documents.json</code>.
+        Evaluation code is MIT licensed. Paper: <a href="https://arxiv.org/abs/2610.27911" target="_blank" rel="noopener">arXiv:2610.27911</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- ======== LIGHTBOX ======== -->
+  <div class="lb" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" hidden>
+    <button class="lb-close" type="button" aria-label="Close" data-lb-close><i class="fas fa-xmark"></i></button>
+    <button class="lb-nav lb-prev" type="button" aria-label="Previous image" data-lb-prev><i class="fas fa-chevron-left"></i></button>
+    <button class="lb-nav lb-next" type="button" aria-label="Next image" data-lb-next><i class="fas fa-chevron-right"></i></button>
+    <div class="lb-inner">
+      <div class="lb-scroll"><img id="lb-img" src="" alt=""></div>
+      <div class="lb-cap"><span id="lb-cap"></span><a id="lb-open" href="#" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> open full size</a></div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      var reduce=false;
+      try{reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+
+      /* theme toggle */
+      var btn=document.getElementById('theme-toggle');
+      if(btn){
+        btn.setAttribute('aria-pressed',String(document.documentElement.classList.contains('dark')));
+        btn.addEventListener('click',function(){
+          var dark=document.documentElement.classList.toggle('dark');
+          try{localStorage.setItem('theme',dark?'dark':'light');}catch(e){}
+          btn.setAttribute('aria-pressed',String(dark));
+        });
+      }
+
+      /* nav: dark glass over the hero, theme glass once scrolled past it */
+      var nav=document.getElementById('topbar'),hero=document.getElementById('top');
+      function navState(){
+        if(!nav||!hero)return;
+        var past=hero.getBoundingClientRect().bottom<=64;
+        nav.classList.toggle('lit',past);
+      }
+      navState();
+      window.addEventListener('scroll',navState,{passive:true});
+      window.addEventListener('resize',navState);
+
+      /* staggered scroll reveals */
+      var staggers=document.querySelectorAll('.stagger');
+      Array.prototype.forEach.call(staggers,function(s){
+        var kids=s.children;
+        for(var i=0;i<kids.length;i++){kids[i].style.setProperty('--d',(i*0.08)+'s');}
+      });
+      var revealEls=Array.prototype.slice.call(document.querySelectorAll('.reveal,.reveal-scale'));
+      function countUp(el){
+        var target=parseInt(el.getAttribute('data-count'),10);
+        if(isNaN(target)||reduce)return;
+        var start=null,dur=1400;
+        function fmt(n){return n.toLocaleString('en-US');}
+        function step(ts){
+          if(start===null)start=ts;
+          var p=Math.min(1,(ts-start)/dur);
+          var e=1-Math.pow(1-p,3);
+          el.textContent=fmt(Math.round(target*e));
+          if(p<1)requestAnimationFrame(step);else el.textContent=fmt(target);
+        }
+        requestAnimationFrame(step);
+      }
+      function activate(el){
+        if(el.classList.contains('in'))return;
+        el.classList.add('in');
+        var nums=el.querySelectorAll('[data-count]');
+        Array.prototype.forEach.call(nums,countUp);
+        var bars=el.querySelectorAll('td.has-bar');
+        Array.prototype.forEach.call(bars,function(td){td.classList.add('in');});
+      }
+      if('IntersectionObserver' in window){
+        var io=new IntersectionObserver(function(entries){
+          entries.forEach(function(en){
+            if(en.isIntersecting){activate(en.target);io.unobserve(en.target);}
+          });
+        },{rootMargin:'0px 0px -8% 0px',threshold:0.08});
+        revealEls.forEach(function(el){io.observe(el);});
+      }else{
+        revealEls.forEach(activate);
+      }
+
+      /* inline bars for the Overall column of the main-results tables */
+      var t5=document.querySelectorAll('table.t5 tbody tr');
+      Array.prototype.forEach.call(t5,function(tr){
+        if(tr.classList.contains('group')||tr.classList.contains('nrow'))return;
+        var td=tr.lastElementChild;if(!td)return;
+        var v=parseFloat(td.textContent);if(isNaN(v))return;
+        td.classList.add('has-bar');
+        var bar=document.createElement('span');bar.className='bar';bar.setAttribute('aria-hidden','true');
+        var fill=document.createElement('i');fill.style.setProperty('--w',v+'%');
+        bar.appendChild(fill);td.appendChild(bar);
+      });
+
+      /* results tabs */
+      var tabs=Array.prototype.slice.call(document.querySelectorAll('.tab'));
+      tabs.forEach(function(t){
+        t.addEventListener('click',function(){
+          tabs.forEach(function(o){o.setAttribute('aria-selected','false');});
+          Array.prototype.forEach.call(document.querySelectorAll('.tabpane'),function(p){p.classList.remove('active');});
+          t.setAttribute('aria-selected','true');
+          var pane=document.getElementById(t.getAttribute('data-pane'));
+          pane.classList.add('active');
+          Array.prototype.forEach.call(pane.querySelectorAll('.reveal'),activate);
+          Array.prototype.forEach.call(pane.querySelectorAll('td.has-bar'),function(td){td.classList.add('in');});
+        });
+      });
+
+      /* connector lines of the conflict illustration (measured from layout) */
+      var csGrid=document.querySelector('.cs-grid'),csSvg=document.getElementById('cs-lines'),csG=document.getElementById('cs-paths');
+      function drawLinks(){
+        if(!csGrid||!csSvg||!csG)return;
+        var W=csGrid.clientWidth,H=csGrid.clientHeight;
+        if(!W||!H||getComputedStyle(csSvg).display==='none'){csG.innerHTML='';return;}
+        csSvg.setAttribute('viewBox','0 0 '+W+' '+H);
+        var node=csGrid.querySelector('.agent-node');
+        var chips=csGrid.querySelectorAll('.chip');
+        if(!node||!chips.length){csG.innerHTML='';return;}
+        var x2=node.offsetLeft-8,y2=node.offsetTop+node.offsetHeight/2;
+        var ns='http://www.w3.org/2000/svg',html='';
+        Array.prototype.forEach.call(chips,function(c,i){
+          var x1=c.offsetLeft+c.offsetWidth+8,y1=c.offsetTop+c.offsetHeight/2;
+          var mx=(x1+x2)/2;
+          var d='M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2;
+          html+='<path class="glowline" d="'+d+'"></path><path d="'+d+'"></path>'+
+                '<circle cx="'+x1+'" cy="'+y1+'" r="3.5"></circle>'+
+                (reduce?'':'<circle class="pk" r="4"><animateMotion dur="'+(2.6+i*0.4)+'s" begin="'+(i*0.5)+'s" repeatCount="indefinite" path="'+d+'"/></circle>');
+        });
+        html+='<circle cx="'+x2+'" cy="'+y2+'" r="4"></circle>';
+        csG.innerHTML=html;
+      }
+      drawLinks();
+      window.addEventListener('resize',drawLinks);
+      if(document.fonts&&document.fonts.ready){document.fonts.ready.then(drawLinks);}
+      window.addEventListener('load',drawLinks);
+
+      /* hover tilt on category cards */
+      var canHover=false;
+      try{canHover=matchMedia('(hover: hover) and (pointer: fine)').matches;}catch(e){}
+      if(canHover&&!reduce){
+        Array.prototype.forEach.call(document.querySelectorAll('.tilt'),function(card){
+          card.addEventListener('mousemove',function(e){
+            var r=card.getBoundingClientRect();
+            var x=(e.clientX-r.left)/r.width-0.5,y=(e.clientY-r.top)/r.height-0.5;
+            card.style.transform='perspective(1000px) rotateX('+(-y*7)+'deg) rotateY('+(x*9)+'deg) translateY(-4px)';
+          });
+          card.addEventListener('mouseleave',function(){card.style.transform='';});
+        });
+      }
+
+      /* teaser play overlay */
+      var video=document.getElementById('teaser'),ov=document.getElementById('play-ov');
+      if(video&&ov){
+        ov.addEventListener('click',function(){
+          ov.classList.add('hide');
+          var p=video.play();if(p&&p.catch)p.catch(function(){});
+        });
+        video.addEventListener('play',function(){ov.classList.add('hide');});
+        video.addEventListener('pause',function(){if(video.currentTime===0)ov.classList.remove('hide');});
+      }
+
+      /* lightbox */
+      var lb=document.getElementById('lightbox'),img=document.getElementById('lb-img'),
+          cap=document.getElementById('lb-cap'),open=document.getElementById('lb-open');
+      var links=Array.prototype.slice.call(document.querySelectorAll('a[data-lightbox]'));
+      var cur=-1;
+      function show(i){
+        if(i<0)i=links.length-1;if(i>=links.length)i=0;
+        cur=i;var a=links[i];
+        var src=a.getAttribute('href');
+        img.src=src;img.alt=(a.querySelector('img')||{}).alt||'';
+        cap.textContent=a.getAttribute('data-caption')||'';
+        open.href=src;
+        lb.hidden=false;lb.classList.add('open');document.body.classList.add('lb-locked');
+        lb.querySelector('.lb-scroll').scrollTop=0;
+      }
+      function hide(){lb.classList.remove('open');lb.hidden=true;document.body.classList.remove('lb-locked');img.src='';}
+      links.forEach(function(a,i){
+        a.addEventListener('click',function(e){
+          if(e.metaKey||e.ctrlKey||e.shiftKey)return;  /* let modifier-clicks open the file directly */
+          e.preventDefault();show(i);
+        });
+      });
+      lb.addEventListener('click',function(e){if(e.target===lb)hide();});
+      lb.querySelector('[data-lb-close]').addEventListener('click',hide);
+      lb.querySelector('[data-lb-prev]').addEventListener('click',function(){show(cur-1);});
+      lb.querySelector('[data-lb-next]').addEventListener('click',function(){show(cur+1);});
+      document.addEventListener('keydown',function(e){
+        if(!lb.classList.contains('open'))return;
+        if(e.key==='Escape')hide();
+        else if(e.key==='ArrowLeft')show(cur-1);
+        else if(e.key==='ArrowRight')show(cur+1);
+      });
+    })();
+  </script>
+</body>
+</html>
