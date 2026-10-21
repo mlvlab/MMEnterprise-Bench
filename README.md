@@ -42,8 +42,7 @@ Jayun Ku<sup>1</sup> &nbsp;
 ## News
 
 - **[Oct 21, 2026]** Preprint released on arXiv: [2610.27911](https://arxiv.org/abs/2610.27911).
-- **[Oct 20, 2026]** Project page and teaser video are live.
-- **Coming soon** — dataset and evaluation toolkit (`mmeb`, frozen retrieval rankings, judge protocol), full generation pipeline code (seed PDF → simulated workspace → validated questions), and a public leaderboard.
+- **Coming soon** — dataset and evaluation toolkit, full generation pipeline code, public leaderboard.
 
 The paper is under review; see the [project page](https://mlvlab.github.io/MMEnterprise-Bench/) for the task taxonomy, the construction pipeline and the main results.
 
