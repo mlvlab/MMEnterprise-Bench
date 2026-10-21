@@ -35,15 +35,11 @@ Jayun Ku<sup>1</sup> &nbsp;
 
 </div>
 
-<p align="center">A benchmark for question answering over evolving multimodal workplace records.</p>
-
-<div align="center">
+A benchmark for question answering over evolving multimodal workplace records.
 
 | Questions | Projects | Retrieval records | Task types |
 |:---:|:---:|:---:|:---:|
 | **1,613** | **30** | **7,140** | **8** |
-
-</div>
 
 ## News
 
@@ -52,7 +48,10 @@ Jayun Ku<sup>1</sup> &nbsp;
 
 ## Main results
 
-Accuracy (%) on all 1,613 questions, 2B retriever, k = 10.
+<details>
+<summary>Accuracy (%) on all 1,613 questions, 2B retriever</summary>
+
+**k = 10**
 
 | Model | Extraction | Attribution | Computation | Comparison | Interpretation | Cross-source | Temporal | Unanswerable | Overall |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -67,8 +66,7 @@ Accuracy (%) on all 1,613 questions, 2B retriever, k = 10.
 | InternVL3.5-8B | 63.4 | 51.3 | 31.9 | 23.1 | 27.2 | 15.6 | 19.3 | 36.8 | 32.7 |
 | Kimi-VL-16B-A3B-Instruct | 56.3 | 40.0 | 14.5 | 16.0 | 16.4 | 11.8 | 14.2 | 10.3 | 22.6 |
 
-<details>
-<summary>k = 50</summary>
+**k = 50**
 
 | Model | Extraction | Attribution | Computation | Comparison | Interpretation | Cross-source | Temporal | Unanswerable | Overall |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
