@@ -6,6 +6,7 @@
   <a href="https://arxiv.org/abs/2610.27911"><img src="https://img.shields.io/badge/arXiv-2610.27911-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv"></a>
   <a href="https://mlvlab.github.io/MMEnterprise-Bench/"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20Project-Page-2b4f9e?style=for-the-badge" alt="Project Page"></a>
   <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset%20coming%20soon-ffce1c?style=for-the-badge" alt="Hugging Face Dataset (coming soon)">
+  <img src="https://img.shields.io/badge/%F0%9F%8F%86%20Leaderboard-coming%20soon-6d28d9?style=for-the-badge" alt="Leaderboard (coming soon)">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-3da639?style=for-the-badge" alt="License"></a>
 </p>
 
@@ -40,9 +41,9 @@ Jayun Ku<sup>1</sup> &nbsp;
 
 ## News
 
-- **2026-10** — Paper preprint on arXiv: [2610.27911](https://arxiv.org/abs/2610.27911). Project page and teaser video are live.
-- **Coming soon** — full generation pipeline code (seed PDF → simulated workspace → validated questions).
-- **Coming soon** — dataset and evaluation toolkit (`mmeb`), with frozen retrieval rankings and the judge protocol.
+- **[Oct 21, 2026]** Preprint released on arXiv: [2610.27911](https://arxiv.org/abs/2610.27911).
+- **[Oct 20, 2026]** Project page and teaser video are live.
+- **Coming soon** — dataset and evaluation toolkit (`mmeb`, frozen retrieval rankings, judge protocol), full generation pipeline code (seed PDF → simulated workspace → validated questions), and a public leaderboard.
 
 The paper is under review; see the [project page](https://mlvlab.github.io/MMEnterprise-Bench/) for the task taxonomy, the construction pipeline and the main results.
 

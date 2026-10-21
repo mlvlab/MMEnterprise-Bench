@@ -417,6 +417,15 @@
       width:100%;height:auto;aspect-ratio:16/9;display:block;background:#000;
       border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-h);
     }
+
+    /* ---------- news ---------- */
+    .news-sec{padding:42px 0 46px;}
+    .newslist{list-style:none;padding:0;margin:16px auto 0;max-width:720px;}
+    .newslist li{display:flex;gap:14px;align-items:baseline;padding:11px 2px;border-bottom:1px solid var(--line);color:var(--muted);font-size:.99rem;line-height:1.55;}
+    .newslist li:last-child{border-bottom:none;}
+    .newslist .d{flex-shrink:0;min-width:110px;color:var(--brand-d);font-weight:700;font-size:.84rem;letter-spacing:.01em;}
+    .newslist b{color:var(--ink);font-weight:600;}
+    @media(max-width:720px){.newslist li{flex-direction:column;gap:2px;}.newslist .d{min-width:0;}}
 </style>
 </head>
 <body>
@@ -432,6 +441,7 @@
       <div class="nav-right">
         <div class="navlinks">
           <a href="#video">Video</a>
+          <a href="#news">News</a>
           <a href="#abstract">Abstract</a>
           <a href="#tasks">Tasks</a>
           <a href="#benchmark">Benchmark</a>
@@ -471,6 +481,7 @@
         <a class="btn" id="paper-btn" href="https://arxiv.org/abs/2610.27911" target="_blank" rel="noopener"><i class="fas fa-file-lines"></i> Paper</a>
         <a class="btn" id="code-btn" href="https://github.com/mlvlab/MMEnterprise-Bench" target="_blank" rel="noopener"><i class="fab fa-github"></i> Code</a>
         <a class="btn ghost" id="data-btn" href="#" title="Dataset release coming soon" aria-disabled="true" onclick="return false;"><span class="emoji">&#129303;</span> Dataset <span class="soon">coming soon</span></a>
+        <a class="btn ghost" id="lb-btn" href="#" title="Leaderboard coming soon" aria-disabled="true" onclick="return false;"><i class="fas fa-trophy"></i> Leaderboard <span class="soon">coming soon</span></a>
       </div>
     </div>
   </header>
@@ -485,6 +496,17 @@
   </section>
 
   <!-- ======== ABSTRACT + TEASER ======== -->
+
+  <section id="news" class="news-sec">
+    <div class="wrap narrow">
+      <span class="eyebrow">News</span>
+      <ul class="newslist">
+        <li><span class="d">Oct 21, 2026</span> <span>Preprint released on <a href="https://arxiv.org/abs/2610.27911" target="_blank" rel="noopener">arXiv</a> (2610.27911).</span></li>
+        <li><span class="d">Oct 20, 2026</span> <span>Project page and teaser video are live.</span></li>
+        <li><span class="d">Coming soon</span> <span>Dataset and evaluation toolkit, full generation pipeline code, and a public <b>leaderboard</b>.</span></li>
+      </ul>
+    </div>
+  </section>
   <section class="alt" id="abstract">
     <div class="wrap">
       <span class="eyebrow">Overview</span>
@@ -869,6 +891,7 @@
       <div class="foot-links">
         <a href="https://github.com/mlvlab/MMEnterprise-Bench" target="_blank" rel="noopener"><i class="fab fa-github"></i> Code</a>
         <span><span class="emoji">&#129303;</span> Dataset (coming soon)</span>
+        <span><i class="fas fa-trophy"></i> Leaderboard (coming soon)</span>
         <a href="https://mlv.kaist.ac.kr/" target="_blank" rel="noopener"><i class="fas fa-flask"></i> MLV Lab</a>
       </div>
       <p class="foot-note">
