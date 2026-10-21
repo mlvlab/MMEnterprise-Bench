@@ -35,25 +35,28 @@ Jayun Ku<sup>1</sup> &nbsp;
 
 </div>
 
-A benchmark for question answering over evolving multimodal workplace records.
+<p align="center">
+<b>MMEnterprise-Bench</b> is a question-answering benchmark over simulated company workspaces — Slack threads, emails, Notion pages, meeting notes, slides, PDF pages and charts — whose records are <b>revised and contradicted over time</b>. It tests whether enterprise agents can reason over evidence, resolve <b>cross-source</b> and <b>temporal</b> conflicts, and recognise <b>unanswerable</b> questions.
+</p>
+
+<div align="center">
 
 | Questions | Projects | Retrieval records | Task types |
 |:---:|:---:|:---:|:---:|
-| **1,613** | **30** | **7,140** | **8** |
+| **1,613** <br><sub>1,526 answerable · 87 unanswerable</sub> | **30** <br><sub>seeded from public papers & reports</sub> | **7,140** <br><sub>5,725 text · 1,415 visual</sub> | **8** <br><sub>in 3 categories</sub> |
+
+</div>
 
 ## News
 
-- **[Oct 21, 2026]** Preprint on arXiv: [2610.27911](https://arxiv.org/abs/2610.27911)
-- **Coming soon:** dataset, evaluation toolkit, generation code, leaderboard
+- **[Oct 21, 2026]** Preprint released on arXiv: [2610.27911](https://arxiv.org/abs/2610.27911).
+- **Coming soon** — dataset and evaluation toolkit, full generation pipeline code, public leaderboard.
 
 ## Main results
 
-<details>
-<summary>Accuracy (%) on all 1,613 questions, 2B retriever</summary>
+Accuracy (%) of 10 multimodal LLMs on all 1,613 questions with the Qwen3-VL-Embedding-2B retriever and **k = 10** retrieved records. Extr. = Extraction, Attr. = Attribution, Comp. = Computation, Cmpr. = Comparison, Interp. = Interpretation, Cross = Cross-source, Temp. = Temporal, Unans. = Unanswerability.
 
-**k = 10**
-
-| Model | Extraction | Attribution | Computation | Comparison | Interpretation | Cross-source | Temporal | Unanswerable | Overall |
+| Model | Extr. | Attr. | Comp. | Cmpr. | Interp. | Cross | Temp. | Unans. | **Overall** |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | GPT-5.6 Sol | 67.5 | 61.3 | 58.1 | 47.2 | 58.6 | 36.3 | 32.5 | 65.5 | **52.6** |
 | GPT-5.6 Luna | 66.4 | 57.5 | 55.5 | 44.8 | 58.2 | 35.4 | 33.5 | 63.2 | 51.3 |
@@ -66,9 +69,10 @@ A benchmark for question answering over evolving multimodal workplace records.
 | InternVL3.5-8B | 63.4 | 51.3 | 31.9 | 23.1 | 27.2 | 15.6 | 19.3 | 36.8 | 32.7 |
 | Kimi-VL-16B-A3B-Instruct | 56.3 | 40.0 | 14.5 | 16.0 | 16.4 | 11.8 | 14.2 | 10.3 | 22.6 |
 
-**k = 50**
+<details>
+<summary><b>k = 50 retrieved records</b></summary>
 
-| Model | Extraction | Attribution | Computation | Comparison | Interpretation | Cross-source | Temporal | Unanswerable | Overall |
+| Model | Extr. | Attr. | Comp. | Cmpr. | Interp. | Cross | Temp. | Unans. | **Overall** |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | GPT-5.6 Sol | 77.6 | 68.8 | 71.6 | 67.5 | 73.3 | 55.2 | 56.1 | 72.4 | **68.0** |
 | GPT-5.6 Luna | 76.5 | 65.0 | 69.4 | 63.7 | 72.4 | 52.8 | 54.2 | 67.8 | 65.8 |
@@ -83,6 +87,8 @@ A benchmark for question answering over evolving multimodal workplace records.
 
 </details>
 
+Even the strongest model reaches only 52.6% (k = 10) and 68.0% (k = 50); errors concentrate on cross-source and temporal conflicts and on questions that need several images. Full analysis on the [project page](https://mlvlab.github.io/MMEnterprise-Bench/).
+
 ## License
 
-Code: MIT. Data: CC BY 4.0.
+Code: MIT. Benchmark annotations and simulated records: CC BY 4.0; embedded figures and page images keep the rights of their source documents.
